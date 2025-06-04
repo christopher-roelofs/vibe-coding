@@ -1,0 +1,1 @@
+g++ main.cpp -std=c++17 -o clock `pkg-config --cflags --libs sdl2 SDL2_ttf`

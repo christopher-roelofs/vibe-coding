@@ -1,0 +1,14 @@
+# Custom shader example
+# Syntax:
+# brightness <factor> - Adjust overall brightness (0.0 to 2.0)
+# contrast <factor> - Adjust contrast (0.5 to 2.0)
+# color_shift <r_shift> <g_shift> <b_shift> - Shift color channels (-255 to 255)
+
+# Increase brightness by 20%
+brightness 1.2
+
+# Increase contrast slightly
+contrast 1.3
+
+# Add a blue tint
+color_shift 0 0 30

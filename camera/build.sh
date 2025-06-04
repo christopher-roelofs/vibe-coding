@@ -1,0 +1,1 @@
+g++ main.cpp -std=c++17 -o webcam_viewer `pkg-config --cflags --libs sdl2 SDL2_ttf SDL2_mixer opencv4`
