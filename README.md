@@ -1,2 +1,2 @@
 # vibe-coding
-Experiments in vive coding
+Experiments in vibe coding
