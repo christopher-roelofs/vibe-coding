@@ -160,7 +160,8 @@ int main(int argc, char* argv[]) {
     // Or place e.g. "Arial.ttf" in the same directory as the executable.
     std::string fontPath = "DejaVuSans.ttf"; 
     SDL_Color textColor = {255, 255, 255, 255}; // White
-    SDL_Color wordColor = {255, 255, 0, 255}; // Yellow for scrambled word
+    SDL_Color letterColor = {255, 255, 255, 255};
+    SDL_Color highlightBgColor = {80, 80, 80, 180}; // Semi-transparent dark gray for highlight background
     SDL_Color guessColor = {173, 216, 230, 255}; // Light Blue for player's guess
     SDL_Color highlightColor = {100, 100, 255, 255}; // Highlight color for selected letter
     SDL_Color feedbackCorrectColor = {0, 200, 0, 255}; // Green for correct
@@ -213,7 +214,7 @@ int main(int argc, char* argv[]) {
         int currentX = 0; // Used to calculate total width and position letters
         for (char c : scrambledWord) {
             std::string letterStr(1, c);
-            SDL_Texture* letterTex = renderText(letterStr, fontPath, wordColor, 48, renderer);
+            SDL_Texture* letterTex = renderText(letterStr, fontPath, letterColor, 48, renderer);
             if (letterTex) {
                 scrambledLetterTextures.push_back(letterTex);
                 SDL_Rect letterRect;
@@ -242,7 +243,7 @@ int main(int argc, char* argv[]) {
     // Call setupNewRound to initialize the first word
     setupNewRound(words, rng, currentWord, scrambledWord, playerGuess, 
                   scrambledLetterTextures, scrambledLetterRects, highlightedScrambledLetterIndex, 
-                  renderer, fontPath, wordColor, playerGuessTexture, playerGuessRect, 
+                  renderer, fontPath, letterColor, playerGuessTexture, playerGuessRect, 
                   SCREEN_WIDTH, (titleTexture ? titleRect.h:0), (titleTexture ? titleRect.y:50));
 
     // Initial prompt message
@@ -335,7 +336,7 @@ int main(int argc, char* argv[]) {
                         if (lastGuessWasCorrect) {
                             setupNewRound(words, rng, currentWord, scrambledWord, playerGuess, 
                                           scrambledLetterTextures, scrambledLetterRects, highlightedScrambledLetterIndex, 
-                                          renderer, fontPath, wordColor, playerGuessTexture, playerGuessRect, 
+                                          renderer, fontPath, letterColor, playerGuessTexture, playerGuessRect, 
                                           SCREEN_WIDTH, (titleTexture ? titleRect.h:0), (titleTexture ? titleRect.y:50));
                         } else {
                             // Clear player's guess for retry
@@ -400,7 +401,22 @@ int main(int argc, char* argv[]) {
             SDL_RenderCopy(renderer, titleTexture, NULL, &titleRect);
         }
 
-        // Render individual scrambled letters and highlight
+        // Draw highlight for selected scrambled letter
+        if (currentGameState == GameState::PLAYING && highlightedScrambledLetterIndex >= 0 && highlightedScrambledLetterIndex < (int)scrambledLetterRects.size()) {
+            SDL_Rect highlightRect = scrambledLetterRects[highlightedScrambledLetterIndex];
+            // Add some padding to the highlight box
+            highlightRect.x -= 3;
+            highlightRect.y -= 3;
+            highlightRect.w += 6;
+            highlightRect.h += 6;
+
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); // Enable alpha blending for the highlight
+            SDL_SetRenderDrawColor(renderer, highlightBgColor.r, highlightBgColor.g, highlightBgColor.b, highlightBgColor.a);
+            SDL_RenderFillRect(renderer, &highlightRect);
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE); // Reset blend mode
+        }
+
+        // Render individual scrambled letters
         for (size_t i = 0; i < scrambledLetterTextures.size(); ++i) {
             if (scrambledLetterTextures[i]) {
                 SDL_RenderCopy(renderer, scrambledLetterTextures[i], NULL, &scrambledLetterRects[i]);
