@@ -35,14 +35,14 @@ Before you can build and play Word Scramble, you'll need the following installed
     ```bash
     make
     ```
-    This will compile the source files and create an executable named `word_scramble` in the project's root directory.
+    This will compile the source files and create an executable named `scramble` in the project's root directory.
 
 ## Running the Game
 
 After successful compilation, you can run the game from the project's root directory:
 
 ```bash
-./word_scramble
+./scramble
 ```
 
 ## Configuration
