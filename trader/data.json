@@ -1,0 +1,55 @@
+{
+  "game_settings": {
+    "game_title": "Wasteland Trader",
+    "initial_money": 500,
+    "initial_health": 100,
+    "max_health": 100,
+    "initial_hold_space": 50,
+    "time_units_per_day": 24,
+    "hotel_cost": 50,
+    "hotel_hp_recovery": 50,
+    "camp_hp_recovery": 15,
+    "camp_encounter_chance": 0.25
+  },
+  "towns": [
+    {
+      "name": "Junkton",
+      "description": "A rough-and-tumble settlement built from scrap.",
+      "id": 0,
+      "quests": [
+        { "name": "Scavenge the Old Mall", "description": "Search the ruins for anything useful.", "time_cost": 4, "encounter_chance": 0.4, "min_hp_loss": 5, "max_hp_loss": 20 },
+        { "name": "Clear the Water Pump", "description": "Zombies have gathered at the old water pump.", "time_cost": 6, "encounter_chance": 0.7, "min_hp_loss": 10, "max_hp_loss": 30 }
+      ]
+    },
+    {
+      "name": "Haven",
+      "description": "A fortified outpost offering a moment of peace.",
+      "id": 1,
+      "quests": [
+        { "name": "Patrol the Perimeter", "description": "Help the guards keep the town safe.", "time_cost": 3, "encounter_chance": 0.2, "min_hp_loss": 5, "max_hp_loss": 10 },
+        { "name": "Supply Run to the Clinic", "description": "Deliver medical supplies to the clinic on the edge of town.", "time_cost": 2, "encounter_chance": 0.1, "min_hp_loss": 0, "max_hp_loss": 5 }
+      ]
+    }
+  ],
+  "items": [
+    { "name": "Canned Food", "type": "Food", "base_price": 20, "effect_description": "A simple meal. Recovers 10 HP.", "data": { "hp_recovery": 10 } },
+    { "name": "Bandages", "type": "Medicine", "base_price": 50, "effect_description": "Standard field dressing. Recovers 25 HP.", "data": { "hp_recovery": 25 } },
+    { "name": "Scrap Metal", "type": "material", "base_price": 15, "effect_description": "Can be used for repairs and crafting." },
+    { "name": "Clean Water", "type": "food", "base_price": 10, "effect_description": "Essential for survival. Recovers 5 HP.", "data": { "hp_recovery": 5 } },
+    { "name": "Rusty Pipe", "type": "weapon", "base_price": 40, "effect_description": "A crude but effective melee weapon.", "data": { "damage": 5 } },
+    { "name": "9mm Ammo", "type": "ammo", "base_price": 5, "effect_description": "Ammunition for a 9mm pistol." },
+    { "name": "MRE", "type": "Food", "base_price": 25, "effect_description": "Meal-Ready-to-Eat. Recovers 15 HP.", "data": { "hp_recovery": 15 } },
+    { "name": "First-Aid Kit", "type": "Medicine", "base_price": 80, "effect_description": "Comprehensive medical kit. Recovers 40 HP.", "data": { "hp_recovery": 40 } }
+  ],
+  "quest_rewards": {
+    "Scavenge the Old Mall": [
+      { "item_name": "Scrap Metal", "min_quantity": 2, "max_quantity": 5, "probability": 0.8 },
+      { "item_name": "Canned Food", "min_quantity": 1, "max_quantity": 2, "probability": 0.6 },
+      { "item_name": "Bandages", "min_quantity": 0, "max_quantity": 1, "probability": 0.3 }
+    ],
+    "Clear the Water Pump": [
+      { "item_name": "Clean Water", "min_quantity": 5, "max_quantity": 10, "probability": 1.0 },
+      { "item_name": "9mm Ammo", "min_quantity": 3, "max_quantity": 8, "probability": 0.5 }
+    ]
+  }
+}
