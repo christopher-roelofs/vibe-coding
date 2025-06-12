@@ -17,6 +17,7 @@ SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
     TTF_Font *font = TTF_OpenFont(fontFile.c_str(), fontSize);
     if (!font) {
         std::cerr << "Failed to load font: " << fontFile << " - TTF_Error: " << TTF_GetError() << std::endl;
+        std::cerr.flush();
         return nullptr;
     }
 
@@ -24,12 +25,14 @@ SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
     if (!surf) {
         TTF_CloseFont(font);
         std::cerr << "Failed to render text surface - TTF_Error: " << TTF_GetError() << std::endl;
+        std::cerr.flush();
         return nullptr;
     }
 
     SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
     if (!texture) {
         std::cerr << "Failed to create texture from surface - SDL_Error: " << SDL_GetError() << std::endl;
+        std::cerr.flush();
     }
 
     SDL_FreeSurface(surf);
@@ -53,7 +56,57 @@ std::string toUpper(std::string s) {
     return s;
 }
 
-// Function to load words from a file
+// Function to load words from an INI file (specifically the [words] section)
+std::vector<std::string> loadWordsFromIniFile(const std::string& filename) {
+    std::vector<std::string> words;
+    std::ifstream file(filename);
+    std::string line;
+    bool inWordsSection = false;
+
+    if (file.is_open()) {
+        while (std::getline(file, line)) {
+            // Basic trim whitespace from start and end
+            line.erase(0, line.find_first_not_of(" \t\n\r\f\v"));
+            line.erase(line.find_last_not_of(" \t\n\r\f\v") + 1);
+
+            if (line.empty() || line[0] == ';' || line[0] == '#') { // Skip empty or comment lines
+                continue;
+            }
+
+            if (line[0] == '[' && line.back() == ']') { // Section header
+                if (line == "[words]") {
+                    inWordsSection = true;
+                } else {
+                    inWordsSection = false; // Exited [words] section or entered another
+                }
+                continue;
+            }
+
+            if (inWordsSection) {
+                bool isValid = true;
+                for (char c : line) {
+                    if (!std::isalpha(c)) {
+                        isValid = false;
+                        break;
+                    }
+                }
+                if (isValid && !line.empty()) {
+                    words.push_back(toUpper(line));
+                }
+            }
+        }
+        file.close();
+    } else {
+        std::cerr << "Warning: Could not open INI file: " << filename << std::endl;
+    }
+    if (words.empty()) {
+        std::cerr << "Warning: No words found in [words] section or file is empty/invalid: " << filename << std::endl;
+    }
+    return words;
+}
+
+// Function to load words from a file (OLD - to be replaced by INI loading)
+/*
 std::vector<std::string> loadWordsFromFile(const std::string& filename) {
     std::vector<std::string> words;
     std::ifstream file(filename);
@@ -81,6 +134,7 @@ std::vector<std::string> loadWordsFromFile(const std::string& filename) {
     }
     return words;
 }
+*/
 
 // Function to scramble a word
 std::string scrambleWord(std::string word, std::mt19937& rng) {
@@ -96,6 +150,7 @@ std::string scrambleWord(std::string word, std::mt19937& rng) {
 }
 
 enum class GameState {
+    START_SCREEN,
     PLAYING,
     SHOW_FEEDBACK
 };
@@ -172,29 +227,69 @@ int main(int argc, char* argv[]) {
     std::random_device rd;
     std::mt19937 rng(rd());
 
-    // Load word list from file
-    std::vector<std::string> words = loadWordsFromFile("words.txt");
-
-    // Fallback to default words if file loading failed or file is empty
-    if (words.empty()) {
-        std::cerr << "Using default word list as words.txt was not found, is empty, or contains no valid words." << std::endl;
-        words = {"HELLO", "WORLD", "CASCADE", "MAKER", "PLANT", "TYCOON", "LINUX", "HANDHELD"};
+    // Word list INI files
+    std::vector<std::string> iniFilePaths = {
+        "assets/lists/default.ini",
+        "assets/lists/animals.ini" // Add more INI files here as needed
+    };
+    int selectedIniFileIndex = 0;
+    std::string currentWordListPath = "";
+    if (!iniFilePaths.empty()) {
+        currentWordListPath = iniFilePaths[selectedIniFileIndex];
     }
+
+    std::vector<std::string> words; // Will be loaded from selected INI
     
-    std::string currentWord = pickRandomWord(words, rng);
+    std::string currentWord = ""; // Initialized after list selection
     std::string scrambledWord = "";
-    if (!currentWord.empty()) {
-        scrambledWord = scrambleWord(currentWord, rng);
-    }
-
     std::string playerGuess = "";
-    // SDL_StartTextInput(); // No longer using direct text input for word formation
 
     std::vector<SDL_Texture*> scrambledLetterTextures;
     std::vector<SDL_Rect> scrambledLetterRects;
     int highlightedScrambledLetterIndex = 0;
 
-    GameState currentGameState = GameState::PLAYING;
+    GameState currentGameState = GameState::START_SCREEN;
+
+    // Textures for Start Screen
+    SDL_Texture* startScreenTitleTexture = nullptr;
+    SDL_Rect startScreenTitleRect = {0,0,0,0};
+    SDL_Texture* wordListTextTexture = nullptr;
+    SDL_Rect wordListTextRect = {0,0,0,0};
+    SDL_Texture* startInstructionsTexture = nullptr;
+    SDL_Rect startInstructionsRect = {0,0,0,0};
+
+    // Function to update word list display text on start screen
+    auto updateWordListDisplayText = [&](SDL_Renderer* renderer, const std::string& fontPath, SDL_Color color) {
+        if (wordListTextTexture) SDL_DestroyTexture(wordListTextTexture);
+        std::string listName = "No Lists Found";
+        if (!currentWordListPath.empty()) {
+            // Extract filename from path for display
+            size_t lastSlash = currentWordListPath.find_last_of("/");
+            listName = (lastSlash == std::string::npos) ? currentWordListPath : currentWordListPath.substr(lastSlash + 1);
+        }
+        wordListTextTexture = renderText("List: " + listName, fontPath, color, 28, renderer);
+        if (wordListTextTexture) {
+            SDL_QueryTexture(wordListTextTexture, NULL, NULL, &wordListTextRect.w, &wordListTextRect.h);
+            wordListTextRect.x = (SCREEN_WIDTH - wordListTextRect.w) / 2;
+            wordListTextRect.y = SCREEN_HEIGHT / 2 - 10; // Adjust Y as needed
+        }
+    };
+
+    if (currentGameState == GameState::START_SCREEN) {
+        startScreenTitleTexture = renderText("Word Scramble!", fontPath, textColor, 48, renderer);
+        if (startScreenTitleTexture) {
+            SDL_QueryTexture(startScreenTitleTexture, NULL, NULL, &startScreenTitleRect.w, &startScreenTitleRect.h);
+            startScreenTitleRect.x = (SCREEN_WIDTH - startScreenTitleRect.w) / 2;
+            startScreenTitleRect.y = SCREEN_HEIGHT / 2 - 100; // Adjust Y as needed
+        }
+        // updateWordListDisplayText(renderer, fontPath, textColor); // Moved into game loop for START_SCREEN rendering
+        startInstructionsTexture = renderText("Left/Right to Change, Enter to Start", fontPath, feedbackPromptColor, 24, renderer);
+        if (startInstructionsTexture) {
+            SDL_QueryTexture(startInstructionsTexture, NULL, NULL, &startInstructionsRect.w, &startInstructionsRect.h);
+            startInstructionsRect.x = (SCREEN_WIDTH - startInstructionsRect.w) / 2;
+            startInstructionsRect.y = SCREEN_HEIGHT / 2 + 50; // Adjust Y as needed
+        }
+    }
     bool lastGuessWasCorrect = false;
     SDL_Texture* feedbackTextTexture = nullptr;
     SDL_Rect feedbackTextRect = {0,0,0,0};
@@ -240,14 +335,9 @@ int main(int argc, char* argv[]) {
 
     SDL_Texture* playerGuessTexture = nullptr;
     SDL_Rect playerGuessRect = {0,0,0,0};
-    // Call setupNewRound to initialize the first word
-    setupNewRound(words, rng, currentWord, scrambledWord, playerGuess, 
-                  scrambledLetterTextures, scrambledLetterRects, highlightedScrambledLetterIndex, 
-                  renderer, fontPath, letterColor, playerGuessTexture, playerGuessRect, 
-                  SCREEN_WIDTH, (titleTexture ? titleRect.h:0), (titleTexture ? titleRect.y:50));
-
-    // Initial prompt message
-    feedbackTextTexture = renderText("Press Space to Submit Guess", fontPath, feedbackPromptColor, 24, renderer);
+    // Initial setup for the first word will happen after selecting a list on the start screen.
+    // For now, feedbackTextTexture will be initialized when transitioning to PLAYING state.
+    // feedbackTextTexture = renderText("Press Space to Submit Guess", fontPath, feedbackPromptColor, 24, renderer);
     if (feedbackTextTexture) {
         SDL_QueryTexture(feedbackTextTexture, NULL, NULL, &feedbackTextRect.w, &feedbackTextRect.h);
         feedbackTextRect.x = (SCREEN_WIDTH - feedbackTextRect.w) / 2;
@@ -276,6 +366,67 @@ int main(int argc, char* argv[]) {
                 quit = true;
             }
             if (e.type == SDL_KEYDOWN) {
+                if (currentGameState == GameState::START_SCREEN) {
+                    if (e.key.keysym.sym == SDLK_LEFT) {
+                        if (!iniFilePaths.empty()) {
+                            selectedIniFileIndex = (selectedIniFileIndex - 1 + iniFilePaths.size()) % iniFilePaths.size();
+                            currentWordListPath = iniFilePaths[selectedIniFileIndex];
+                            updateWordListDisplayText(renderer, fontPath, textColor);
+                        }
+                    } else if (e.key.keysym.sym == SDLK_RIGHT) {
+                        if (!iniFilePaths.empty()) {
+                            selectedIniFileIndex = (selectedIniFileIndex + 1) % iniFilePaths.size();
+                            currentWordListPath = iniFilePaths[selectedIniFileIndex];
+                            updateWordListDisplayText(renderer, fontPath, textColor);
+                        }
+                    } else if (e.key.keysym.sym == SDLK_RETURN) {
+                        if (!currentWordListPath.empty()) {
+                            words = loadWordsFromIniFile(currentWordListPath);
+                            if (words.empty()) {
+                                std::cerr << "Selected word list '" << currentWordListPath << "' is empty or invalid. Cannot start game." << std::endl;
+                                // Optionally, display an error on screen or prevent starting
+                                // For now, we'll let it proceed but it will likely show 'ERROR' as scrambled word
+                                // if pickRandomWord returns empty and scrambleWord gets that.
+                                // A better approach would be to prevent game start or select a default.
+                                words = {"EMPTY", "LIST"}; // Fallback to prevent crash, but shows issue
+                            }
+                            
+                            // Destroy start screen textures
+                            if (startScreenTitleTexture) SDL_DestroyTexture(startScreenTitleTexture); startScreenTitleTexture = nullptr;
+                            if (wordListTextTexture) SDL_DestroyTexture(wordListTextTexture); wordListTextTexture = nullptr;
+                            if (startInstructionsTexture) SDL_DestroyTexture(startInstructionsTexture); startInstructionsTexture = nullptr;
+
+                            currentGameState = GameState::PLAYING;
+                            // Setup for the first round now that words are loaded
+                            setupNewRound(words, rng, currentWord, scrambledWord, playerGuess, 
+                                          scrambledLetterTextures, scrambledLetterRects, highlightedScrambledLetterIndex, 
+                                          renderer, fontPath, letterColor, playerGuessTexture, playerGuessRect, 
+                                          SCREEN_WIDTH, (titleTexture ? titleRect.h:0), (titleTexture ? titleRect.y:50));
+                            
+                            // Initial prompt message for PLAYING state
+                            if (feedbackTextTexture) SDL_DestroyTexture(feedbackTextTexture); // Clear any old one
+                            feedbackTextTexture = renderText("Press Space to Submit Guess", fontPath, feedbackPromptColor, 24, renderer);
+                            if (feedbackTextTexture) {
+                                SDL_QueryTexture(feedbackTextTexture, NULL, NULL, &feedbackTextRect.w, &feedbackTextRect.h);
+                                feedbackTextRect.x = (SCREEN_WIDTH - feedbackTextRect.w) / 2;
+                                int player_guess_render_height = (playerGuessTexture ? playerGuessRect.h : 40);
+                                int base_y_for_feedback;
+                                if (!scrambledLetterRects.empty()) {
+                                    base_y_for_feedback = playerGuessRect.y + player_guess_render_height;
+                                } else if (titleTexture) {
+                                    base_y_for_feedback = (titleRect.y + titleRect.h + 30 + 48) + 20 + player_guess_render_height;
+                                } else {
+                                    base_y_for_feedback = (50 + 30 + 48) + 20 + player_guess_render_height;
+                                }
+                                feedbackTextRect.y = base_y_for_feedback + 15;
+                            }
+                        }
+                    } else if (e.key.keysym.sym == SDLK_ESCAPE) {
+                         quit = true; // Allow escape from start screen
+                    }
+                } else { // GameState is PLAYING or SHOW_FEEDBACK
+                    // This 'else' pairs with 'if (currentGameState == GameState::START_SCREEN)'
+                    // The following is the original event handling for PLAYING/SHOW_FEEDBACK
                 if (e.key.keysym.sym == SDLK_ESCAPE) {
                     quit = true;
                 }
@@ -386,23 +537,39 @@ int main(int argc, char* argv[]) {
                         playerGuessTexture = nullptr;
                         playerGuessRect.w = 0; playerGuessRect.h = 0; // Effectively hides it
                     }
-                }
+                } // Closes 'else if (e.key.keysym.sym == SDLK_BACKSPACE && !playerGuess.empty())'
+            } // Closes 'else { // GameState is PLAYING or SHOW_FEEDBACK }'
             } 
             // Removed SDL_TEXTINPUT handling
             // TODO: Add event handling for SDL_CONTROLLERBUTTONDOWN, SDL_CONTROLLERAXISMOTION for D-pad/face buttons
-        }
+        } // End of SDL_PollEvent loop
+    } // THIS WAS THE MISSING BRACE for 'else { // GameState is PLAYING or SHOW_FEEDBACK' block
 
         // Clear screen (Dark Blue background)
         SDL_SetRenderDrawColor(renderer, 20, 20, 80, 255);
         SDL_RenderClear(renderer);
 
-        // Render title text
-        if (titleTexture) {
-            SDL_RenderCopy(renderer, titleTexture, NULL, &titleRect);
-        }
+        if (currentGameState == GameState::START_SCREEN) {
+            // Ensure word list display is updated every frame for the start screen
+            updateWordListDisplayText(renderer, fontPath, textColor);
 
-        // Draw highlight for selected scrambled letter
-        if (currentGameState == GameState::PLAYING && highlightedScrambledLetterIndex >= 0 && highlightedScrambledLetterIndex < (int)scrambledLetterRects.size()) {
+            if (startScreenTitleTexture) {
+                SDL_RenderCopy(renderer, startScreenTitleTexture, NULL, &startScreenTitleRect);
+            }
+            if (wordListTextTexture) {
+                SDL_RenderCopy(renderer, wordListTextTexture, NULL, &wordListTextRect);
+            }
+            if (startInstructionsTexture) {
+                SDL_RenderCopy(renderer, startInstructionsTexture, NULL, &startInstructionsRect);
+            }
+        } else { // PLAYING or SHOW_FEEDBACK
+            // Render title text (assuming 'titleTexture' is the main game title, might need adjustment if it's different from start screen title)
+            if (titleTexture) {
+                SDL_RenderCopy(renderer, titleTexture, NULL, &titleRect);
+            }
+
+            // Draw highlight for selected scrambled letter
+            if (currentGameState == GameState::PLAYING && highlightedScrambledLetterIndex >= 0 && highlightedScrambledLetterIndex < (int)scrambledLetterRects.size()) {
             SDL_Rect highlightRect = scrambledLetterRects[highlightedScrambledLetterIndex];
             // Add some padding to the highlight box
             highlightRect.x -= 3;
@@ -442,10 +609,14 @@ int main(int argc, char* argv[]) {
 
         // Update screen
         SDL_RenderPresent(renderer);
-    }
+    } // End of main game loop (while !quit)
 
     // Cleanup
-    if (titleTexture) {
+    if (startScreenTitleTexture) SDL_DestroyTexture(startScreenTitleTexture);
+    if (wordListTextTexture) SDL_DestroyTexture(wordListTextTexture);
+    if (startInstructionsTexture) SDL_DestroyTexture(startInstructionsTexture);
+
+    if (titleTexture) { // This is the main game title texture
         SDL_DestroyTexture(titleTexture);
     }
     // if (scrambledWordTexture) SDL_DestroyTexture(scrambledWordTexture); // Removed, letters are individual

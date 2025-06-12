@@ -1,0 +1,90 @@
+; Name: Smart Generated Pack
+; Author: Gemini
+; Date: 2025-06-11
+; Description: A pack with levels requiring cats or cheese, and blocks for cats.
+; Difficulty: Medium
+
+; Level 1: Cheese Chase
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W.M................W
+W..................W
+W..................W
+W..................W
+W..........C.......W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW
+
+; Level 2: First Cat
+WWWWWWWWWWWWWWWWWWWW
+W.M................W
+W...B..............W
+W..................W
+W.....K............W
+W...B...B..........W
+W..................W
+W...B...B..........W
+W.............C....W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW
+
+; Level 3: Two Cats, More Blocks
+WWWWWWWWWWWWWWWWWWWW
+W.M.......B........W
+W...B..............W
+W.....K.......B....W
+W.......B..........W
+W.B...........K....W
+W...B.....B........W
+W.......B..........W
+W.B...........C....W
+W...B..............W
+W.......B..........W
+W..................W
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW
+
+; Level 4: Cheese Puzzle with a Cat Guard
+WWWWWWWWWWWWWWWWWWWW
+W.M................W
+W...B.WWWWWWWWWWWW.W
+W.....K.W........W.W
+W...B...W...C....W.W
+W.WWWWWWW.WWWWWWWW.W
+W.B...............W
+W...B..............W
+W.B................W
+W...B..............W
+W..................W
+W..................W
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW
+
+; Level 5: Cat and Cheese Galore
+WWWWWWWWWWWWWWWWWWWW
+W.M.B.K.......C....W
+W...H..............W
+W.B.WWWWWWWWWWWW.B.W
+W.K..............B.W
+W...B.H.......B....W
+W.WWWWWWWWWWWWWWWW.W
+W.C................W
+W...B.........B....W
+W.B...........B....W
+W..................W
+W..................W
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW

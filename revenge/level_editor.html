@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Revenge - Level Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            width: 95%;
+            max-width: 1400px;
+            gap: 20px;
+        }
+        .controls, .metadata, .level-grid-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            width: 250px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .metadata {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .level-grid-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2, h3 {
+            margin-top: 0;
+            color: #333;
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"], select, textarea {
+            width: calc(100% - 12px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        .palette-item {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            font-size: 10px;
+            text-align: center;
+        }
+        .palette-item.selected {
+            border-color: #007bff;
+            background-color: #e0efff;
+            box-shadow: 0 0 5px #007bff;
+        }
+        #levelGrid {
+            display: grid;
+            border: 1px solid #ccc;
+            margin-top: 15px;
+            background-color: #e0e0e0; /* Default for empty cells */
+        }
+        .grid-cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .grid-cell:hover {
+            background-color: #cceeff;
+        }
+        .file-operations, .level-operations, .pack-operations {
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Open Revenge - Level Editor</h1>
+
+    <div class="container">
+        <div class="controls">
+            <h3>Tools & Palette</h3>
+            <div class="palette" id="palette">
+                <!-- Palette items will be added by JS -->
+            </div>
+            
+            <label for="gridWidth">Grid Width:</label>
+            <input type="number" id="gridWidth" value="20" min="5" max="100">
+            <label for="gridHeight">Grid Height:</label>
+            <input type="number" id="gridHeight" value="15" min="5" max="100">
+            <button id="resizeGridBtn">Resize/Create Grid</button>
+
+            <div class="file-operations">
+                <h3>File</h3>
+                <label for="fileInput">Load Level Pack (.lvl):</label>
+                <input type="file" id="fileInput" accept=".lvl">
+
+                <h4 style="margin-top: 20px; margin-bottom: 5px;">Or Paste Level Data:</h4>
+                <textarea id="levelTextInput" rows="8" placeholder="; Name: My Awesome Pack...\n; Level 1: First Level\nWWWW\nW.MW\nWWWW"></textarea>
+                <button id="loadFromTextBtn">Load from Text</button>
+
+                <button id="exportLevelPackBtn" style="margin-top: 20px;">Export Level Pack (.lvl)</button>
+            </div>
+
+            <div class="pack-operations">
+                <h3>Pack</h3>
+                 <button id="newPackBtn">New Empty Pack</button>
+            </div>
+
+            <div class="level-operations">
+                <h3>Level</h3>
+                <label for="levelSelector">Edit Level:</label>
+                <select id="levelSelector"></select>
+                <button id="addNewLevelBtn">Add New Level to Pack</button>
+                <button id="duplicateCurrentLevelBtn">Duplicate Current Level</button>
+                <button id="deleteCurrentLevelBtn">Delete Current Level</button>
+            </div>
+        </div>
+
+        <div class="metadata">
+            <h3>Pack Metadata</h3>
+            <label for="packName">Pack Name:</label>
+            <input type="text" id="packName">
+            <label for="packDescription">Description:</label>
+            <textarea id="packDescription"></textarea>
+            <label for="packAuthor">Author:</label>
+            <input type="text" id="packAuthor">
+            <label for="packDate">Date:</label>
+            <input type="text" id="packDate">
+            <label for="packDifficulty">Difficulty:</label>
+            <input type="text" id="packDifficulty">
+
+            <h3 style="margin-top: 20px;">Current Level Metadata</h3>
+            <label for="levelTitle">Level Title:</label>
+            <input type="text" id="levelTitle">
+        </div>
+
+        <div class="level-grid-container">
+            <h2 id="currentLevelDisplay">No Level Loaded</h2>
+            <div id="levelGrid"></div>
+            <h4 style="margin-top: 20px; margin-bottom: 5px;">Live Level Text</h4>
+            <textarea id="levelGridText" rows="15" style="width: 95%; font-family: monospace; font-size: 16px; white-space: pre; overflow-wrap: normal; overflow-x: scroll;" placeholder="Grid data will appear here when a level is edited..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants and Global State ---
+        const TILE_TYPES = {
+            EMPTY: { char: '.', name: 'Empty', color: '#e0e0e0' },
+            WALL: { char: 'W', name: 'Wall', color: '#8B4513' }, // Brown
+            PLAYER: { char: 'M', name: 'Player', color: '#00FF00' }, // Green
+            CAT: { char: 'K', name: 'Cat', color: '#FF0000' }, // Red
+            CHEESE: { char: 'C', name: 'Cheese', color: '#FFFF00' }, // Yellow
+            TRAP: { char: 'T', name: 'Trap', color: '#808080' }, // Grey
+            HOLE: { char: 'H', name: 'Hole', color: '#000000' }, // Black
+            BLOCK: { char: 'B', name: 'Block', color: '#A0A0A0' } // Light Grey
+        };
+
+        let currentPack = {
+            metadata: {
+                Name: '',
+                Description: '',
+                Author: '',
+                Date: '',
+                Difficulty: ''
+            },
+            levels: [] // { title: '', grid: [[' ', ...], ...] }
+        };
+        let currentLevelIndex = -1;
+        let selectedPaletteTile = TILE_TYPES.WALL.char; // Default to Wall ('W')
+        let gridWidth = 20;
+        let gridHeight = 15;
+
+        // --- DOM Elements ---
+        const fileInput = document.getElementById('fileInput');
+        const exportLevelPackBtn = document.getElementById('exportLevelPackBtn');
+        const packNameInput = document.getElementById('packName');
+        const packDescriptionInput = document.getElementById('packDescription');
+        const packAuthorInput = document.getElementById('packAuthor');
+        const packDateInput = document.getElementById('packDate');
+        const packDifficultyInput = document.getElementById('packDifficulty');
+        const levelTitleInput = document.getElementById('levelTitle');
+        const levelSelector = document.getElementById('levelSelector');
+        const addNewLevelBtn = document.getElementById('addNewLevelBtn');
+        const duplicateCurrentLevelBtn = document.getElementById('duplicateCurrentLevelBtn');
+        const deleteCurrentLevelBtn = document.getElementById('deleteCurrentLevelBtn');
+        const newPackBtn = document.getElementById('newPackBtn');
+        const paletteContainer = document.getElementById('palette');
+        const levelGridElement = document.getElementById('levelGrid');
+        const gridWidthInput = document.getElementById('gridWidth');
+        const gridHeightInput = document.getElementById('gridHeight');
+        const resizeGridBtn = document.getElementById('resizeGridBtn');
+        const currentLevelDisplay = document.getElementById('currentLevelDisplay');
+        const levelGridText = document.getElementById('levelGridText');
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initPalette();
+            updateUIFromState();
+            createOrUpdateGrid();
+
+            fileInput.addEventListener('change', handleFileLoad);
+            document.getElementById('loadFromTextBtn').addEventListener('click', handleLoadFromText);
+            exportLevelPackBtn.addEventListener('click', handleExportLevelPack);
+            resizeGridBtn.addEventListener('click', handleResizeGrid);
+            levelSelector.addEventListener('change', handleLevelSelect);
+            levelGridText.addEventListener('input', handleGridTextUpdate);
+            addNewLevelBtn.addEventListener('click', handleAddNewLevel);
+            duplicateCurrentLevelBtn.addEventListener('click', handleDuplicateLevel);
+            deleteCurrentLevelBtn.addEventListener('click', handleDeleteCurrentLevel);
+            newPackBtn.addEventListener('click', handleNewPack);
+
+            // Metadata input listeners
+            packNameInput.addEventListener('input', (e) => currentPack.metadata.Name = e.target.value);
+            packDescriptionInput.addEventListener('input', (e) => currentPack.metadata.Description = e.target.value);
+            packAuthorInput.addEventListener('input', (e) => currentPack.metadata.Author = e.target.value);
+            packDateInput.addEventListener('input', (e) => currentPack.metadata.Date = e.target.value);
+            packDifficultyInput.addEventListener('input', (e) => currentPack.metadata.Difficulty = e.target.value);
+            levelTitleInput.addEventListener('input', (e) => {
+                if (currentLevelIndex !== -1 && currentPack.levels[currentLevelIndex]) {
+                    currentPack.levels[currentLevelIndex].title = e.target.value;
+                    updateLevelSelector(); // Refresh selector if title changes
+                }
+            });
+        });
+
+        function initPalette() {
+            paletteContainer.innerHTML = '';
+            Object.values(TILE_TYPES).forEach(tile => {
+                const item = document.createElement('div');
+                item.classList.add('palette-item');
+                item.dataset.char = tile.char;
+                item.textContent = tile.name;
+                item.style.backgroundColor = tile.color;
+                if (tile.char === TILE_TYPES.HOLE.char || tile.char === TILE_TYPES.WALL.char) item.style.color = 'white';
+                if (tile.char === selectedPaletteTile) {
+                    item.classList.add('selected');
+                }
+                item.addEventListener('click', () => {
+                    selectedPaletteTile = tile.char;
+                    document.querySelectorAll('.palette-item').forEach(p => p.classList.remove('selected'));
+                    item.classList.add('selected');
+                });
+                paletteContainer.appendChild(item);
+            });
+        }
+        
+        function createEmptyLevel(title = 'New Level') {
+            const newGrid = Array(gridHeight).fill(null).map(() => Array(gridWidth).fill(TILE_TYPES.EMPTY.char));
+            return { title: title, grid: newGrid };
+        }
+
+        function handleNewPack(){
+            currentPack = {
+                metadata: {
+                    Name: 'New Pack',
+                    Description: '',
+                    Author: '',
+                    Date: new Date().toISOString().slice(0,10),
+                    Difficulty: 'Normal'
+                },
+                levels: [createEmptyLevel('Level 1')]
+            };
+            currentLevelIndex = 0;
+            gridWidth = currentPack.levels[0].grid[0]?.length || 20;
+            gridHeight = currentPack.levels[0].grid.length || 15;
+            updateUIFromState();
+        }
+
+        function handleResizeGrid() {
+            const newWidth = parseInt(gridWidthInput.value);
+            const newHeight = parseInt(gridHeightInput.value);
+
+            if (isNaN(newWidth) || isNaN(newHeight) || newWidth < 5 || newHeight < 5 || newWidth > 100 || newHeight > 100) {
+                alert('Invalid grid dimensions. Width and height must be between 5 and 100.');
+                return;
+            }
+
+            gridWidth = newWidth;
+            gridHeight = newHeight;
+
+            if (currentLevelIndex !== -1 && currentPack.levels[currentLevelIndex]) {
+                const currentLevel = currentPack.levels[currentLevelIndex];
+                const oldGrid = currentLevel.grid;
+                const newGrid = Array(gridHeight).fill(null).map(() => Array(gridWidth).fill(TILE_TYPES.EMPTY.char));
+
+                for (let r = 0; r < Math.min(gridHeight, oldGrid.length); r++) {
+                    for (let c = 0; c < Math.min(gridWidth, oldGrid[r].length); c++) {
+                        newGrid[r][c] = oldGrid[r][c];
+                    }
+                }
+                currentLevel.grid = newGrid;
+            } else {
+                // If no level selected, or pack is empty, create a new level with these dimensions
+                if (currentPack.levels.length === 0) {
+                     currentPack.levels.push(createEmptyLevel());
+                     currentLevelIndex = 0;
+                } else if (currentLevelIndex === -1 && currentPack.levels.length > 0) {
+                    currentLevelIndex = 0; // select first level
+                }
+                // if a level is selected, it's handled above. If not, this will apply to the next new level.
+            }
+            updateUIFromState();
+        }
+
+        function updateGridTextView() {
+            if (currentLevelIndex !== -1 && currentPack.levels[currentLevelIndex]) {
+                const grid = currentPack.levels[currentLevelIndex].grid;
+                const text = grid.map(row => row.join('')).join('\n');
+                // Only update if the text is different to avoid cursor jumping
+                if (levelGridText.value !== text) {
+                    levelGridText.value = text;
+                }
+            } else {
+                levelGridText.value = '';
+            }
+        }
+
+        function handleGridTextUpdate() {
+            if (currentLevelIndex !== -1 && currentPack.levels[currentLevelIndex]) {
+                const text = levelGridText.value;
+                const newGrid = text.split('\n').map(line => line.split(''));
+                currentPack.levels[currentLevelIndex].grid = newGrid;
+                
+                // Also update width/height for consistency
+                gridHeightInput.value = newGrid.length;
+                gridWidthInput.value = newGrid[0]?.length || 0;
+
+                createOrUpdateGrid(); // Redraw the visual grid
+            }
+        }
+
+        function createOrUpdateGrid() {
+            levelGridElement.innerHTML = '';
+            if (currentLevelIndex === -1 || !currentPack.levels[currentLevelIndex]) {
+                levelGridElement.style.gridTemplateColumns = `repeat(${gridWidth}, 30px)`;
+                for (let r = 0; r < gridHeight; r++) {
+                    for (let c = 0; c < gridWidth; c++) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('grid-cell');
+                        cell.style.backgroundColor = TILE_TYPES.EMPTY.color;
+                        levelGridElement.appendChild(cell);
+                    }
+                }
+                currentLevelDisplay.textContent = "Grid Ready (No Level Selected)";
+                return;
+            }
+
+            const level = currentPack.levels[currentLevelIndex];
+            const currentGrid = level.grid;
+            const currentGridHeight = currentGrid.length;
+            const currentGridWidth = currentGrid[0]?.length || 0;
+
+            levelGridElement.style.gridTemplateColumns = `repeat(${currentGridWidth}, 30px)`;
+
+            for (let r = 0; r < currentGridHeight; r++) {
+                for (let c = 0; c < currentGridWidth; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell');
+                    const tileChar = currentGrid[r][c];
+                    const tileType = Object.values(TILE_TYPES).find(t => t.char === tileChar) || TILE_TYPES.EMPTY;
+                    
+                    cell.textContent = tileChar === TILE_TYPES.EMPTY.char ? '' : tileChar;
+                    cell.style.backgroundColor = tileType.color;
+                    if (tileType.char === 'H' || tileType.char === 'X') cell.style.color = 'white';
+
+                    cell.addEventListener('click', () => {
+                        // Ensure only one player 'P'
+                        if (selectedPaletteTile === TILE_TYPES.PLAYER.char) {
+                            for(let sr=0; sr < currentGrid.length; sr++) {
+                                for (let sc=0; sc < currentGrid[sr].length; sc++) {
+                                    if (currentGrid[sr][sc] === TILE_TYPES.PLAYER.char) {
+                                        currentGrid[sr][sc] = TILE_TYPES.EMPTY.char;
+                                    }
+                                }
+                            }
+                        }
+                        currentGrid[r][c] = selectedPaletteTile;
+                        createOrUpdateGrid(); // Re-render the grid
+                    });
+                    levelGridElement.appendChild(cell);
+                }
+            }
+            currentLevelDisplay.textContent = `Editing: ${level.title} (${currentGridWidth}x${currentGridHeight})`;
+            updateGridTextView();
+        }
+
+        function updateUIFromState() {
+            packNameInput.value = currentPack.metadata.Name || '';
+            packDescriptionInput.value = currentPack.metadata.Description || '';
+            packAuthorInput.value = currentPack.metadata.Author || '';
+            packDateInput.value = currentPack.metadata.Date || '';
+            packDifficultyInput.value = currentPack.metadata.Difficulty || '';
+
+            updateLevelSelector();
+
+            if (currentLevelIndex !== -1 && currentPack.levels[currentLevelIndex]) {
+                const level = currentPack.levels[currentLevelIndex];
+                levelTitleInput.value = level.title;
+                gridWidthInput.value = level.grid[0]?.length || gridWidth;
+                gridHeightInput.value = level.grid.length || gridHeight;
+            } else {
+                levelTitleInput.value = '';
+                gridWidthInput.value = gridWidth;
+                gridHeightInput.value = gridHeight;
+            }
+            createOrUpdateGrid();
+        }
+        
+        function updateLevelSelector(){
+            levelSelector.innerHTML = '';
+            if (currentPack.levels.length === 0) {
+                const option = document.createElement('option');
+                option.textContent = "No levels in pack";
+                levelSelector.appendChild(option);
+                levelSelector.disabled = true;
+                levelTitleInput.value = '';
+                currentLevelIndex = -1;
+            } else {
+                currentPack.levels.forEach((level, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = level.title || `Level ${index + 1}`;
+                    if (index === currentLevelIndex) {
+                        option.selected = true;
+                    }
+                    levelSelector.appendChild(option);
+                });
+                levelSelector.disabled = false;
+            }
+        }
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                parseLevelPack(content);
+                currentLevelIndex = currentPack.levels.length > 0 ? 0 : -1;
+                updateUIFromState();
+            };
+            reader.readAsText(file);
+        }
+
+        function handleLoadFromText() {
+            const content = document.getElementById('levelTextInput').value;
+            if (!content.trim()) {
+                alert('Text area is empty. Paste level data to load.');
+                return;
+            }
+            parseLevelPack(content);
+            currentLevelIndex = currentPack.levels.length > 0 ? 0 : -1;
+            updateUIFromState();
+        }
+
+        function parseLevelPack(fileContent) {
+            const lines = fileContent.split(/\r?\n/);
+            const newPack = {
+                metadata: {},
+                levels: []
+            };
+            let currentLevel = null; // Object to hold {title, grid}
+
+            lines.forEach(line => {
+                const trimmedLine = line.trim();
+                if (trimmedLine === '') return; // Skip empty lines
+
+                // Check for pack metadata first
+                if (trimmedLine.startsWith('; Name:')) {
+                    newPack.metadata.Name = trimmedLine.substring('; Name:'.length).trim();
+                } else if (trimmedLine.startsWith('; Description:')) {
+                    newPack.metadata.Description = trimmedLine.substring('; Description:'.length).trim();
+                } else if (trimmedLine.startsWith('; Author:')) {
+                    newPack.metadata.Author = trimmedLine.substring('; Author:'.length).trim();
+                } else if (trimmedLine.startsWith('; Date:')) {
+                    newPack.metadata.Date = trimmedLine.substring('; Date:'.length).trim();
+                } else if (trimmedLine.startsWith('; Difficulty:')) {
+                    newPack.metadata.Difficulty = trimmedLine.substring('; Difficulty:'.length).trim();
+                } 
+                // Check for a level title (any other line starting with ';')
+                else if (trimmedLine.startsWith(';')) {
+                    // If we were already building a level, push it to the pack before starting a new one.
+                    if (currentLevel) {
+                        newPack.levels.push(currentLevel);
+                    }
+                    // Start a new level
+                    currentLevel = {
+                        title: trimmedLine.substring(1).trim(), // Get title text after ';'
+                        grid: []
+                    };
+                } 
+                // Otherwise, it must be grid data
+                else {
+                    // If we haven't started a level yet (e.g., no title for the first level), create one.
+                    if (!currentLevel) {
+                        currentLevel = {
+                            title: 'Untitled Level 1',
+                            grid: []
+                        };
+                    }
+                    currentLevel.grid.push(trimmedLine.split(''));
+                }
+            });
+
+            // After the loop, push the very last level that was being worked on.
+            if (currentLevel) {
+                newPack.levels.push(currentLevel);
+            }
+
+            currentPack = newPack;
+            if (currentPack.levels.length > 0 && currentPack.levels[0].grid.length > 0) {
+                gridHeight = currentPack.levels[0].grid.length;
+                gridWidth = currentPack.levels[0].grid[0].length;
+            }
+        }
+
+        function handleExportLevelPack() {
+            if (!currentPack.metadata.PACK_NAME && currentPack.levels.length === 0) {
+                alert("Cannot export an empty pack. Load or create some content first.");
+                return;
+            }
+            const content = formatLevelPackToString();
+            const blob = new Blob([content], { type: 'text/plain' });
+            const a = document.createElement('a');
+            const packFileName = (currentPack.metadata.Name || 'level_pack').replace(/[^a-z0-9_\-]+/gi, '_') + '.lvl';
+            a.href = URL.createObjectURL(blob);
+            a.download = packFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+
+        function formatLevelPackToString() {
+            let output = [];
+            output.push(`; Name: ${currentPack.metadata.Name || ''}`);
+            output.push(`; Description: ${currentPack.metadata.Description || ''}`);
+            output.push(`; Author: ${currentPack.metadata.Author || ''}`);
+            output.push(`; Date: ${currentPack.metadata.Date || ''}`);
+            output.push(`; Difficulty: ${currentPack.metadata.Difficulty || ''}`);
+            output.push(''); // Blank line after pack metadata
+
+            currentPack.levels.forEach(level => {
+                output.push(`; ${level.title || 'Untitled Level'}`);
+                level.grid.forEach(row => {
+                    output.push(row.join(''));
+                });
+                output.push(''); // Blank line after each level
+            });
+
+            return output.join('\n');
+        }
+
+        function handleLevelSelect() {
+            currentLevelIndex = parseInt(levelSelector.value);
+            updateUIFromState();
+        }
+
+        function handleDuplicateLevel() {
+            if (currentLevelIndex === -1 || !currentPack.levels[currentLevelIndex]) {
+                alert("No level selected to duplicate.");
+                return;
+            }
+
+            const originalLevel = currentPack.levels[currentLevelIndex];
+            
+            // Create a deep copy of the grid
+            const newGrid = originalLevel.grid.map(row => [...row]);
+            
+            const newLevel = {
+                title: originalLevel.title + " (Copy)",
+                grid: newGrid
+            };
+
+            // Insert the new level right after the original one
+            currentPack.levels.splice(currentLevelIndex + 1, 0, newLevel);
+            
+            // Switch to the new level
+            currentLevelIndex++;
+            
+            updateUIFromState();
+        }
+
+        function handleAddNewLevel() {
+            const newLevelTitle = `Level ${currentPack.levels.length + 1}`;
+            const newLevel = createEmptyLevel(newLevelTitle);
+            currentPack.levels.push(newLevel);
+            currentLevelIndex = currentPack.levels.length - 1;
+            updateUIFromState();
+        }
+
+        function handleDeleteCurrentLevel() {
+            if (currentLevelIndex === -1 || currentPack.levels.length === 0) {
+                alert("No level selected to delete.");
+                return;
+            }
+            if (confirm(`Are you sure you want to delete level: ${currentPack.levels[currentLevelIndex].title}?`)) {
+                currentPack.levels.splice(currentLevelIndex, 1);
+                currentLevelIndex = Math.max(0, currentLevelIndex - 1);
+                if (currentPack.levels.length === 0) currentLevelIndex = -1;
+                updateUIFromState();
+            }
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+
+# Executables
+*.exe
+*.out
+revenge
+
+# Object files
+*.o
+*.obj
+
+# IDE specific files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sdf
+
+# macOS specific
+.DS_Store
