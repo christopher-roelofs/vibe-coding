@@ -8,7 +8,7 @@ A fun and challenging word scramble game built with C++ and the SDL2 library. Te
 *   **Configurable Appearance:** Customize game colors using the `settings.ini` file or the provided `settings_editor.html`.
 *   **Simple Controls:** Uses keyboard input for easy navigation and gameplay.
 *   **Cross-Platform:** Built with SDL2, making it potentially portable to other operating systems.
-*   **Settings Editor:** A standalone HTML tool (`settings_editor.html`) allows for easy visual editing of color schemes in `settings.ini`.
+*   **[Settings Editor](https://christopher-roelofs.github.io/vibe-coding/settings_editor.html):** A standalone HTML tool (`settings_editor.html`) allows for easy visual editing of color schemes in `settings.ini`.
 
 ## Prerequisites
 
