@@ -4,6 +4,10 @@ A C++ and SDL2 clone of the classic game Rodent's Revenge. This version features
 
 The goal is to guide the mouse (`M`) to trap all the cats (`K`) on the level by pushing blocks (`B`). Once all cats are trapped, you can safely collect the cheese (`C`) to win.
 
+## [Level Editor](https://christopher-roelofs.github.io/vibe-coding/level_editor.html) (`level_editor.html`)
+
+An in-browser tool to create and modify level packs. Just open the file in a modern web browser.
+
 ## Prerequisites
 
 - C++ Compiler (supporting C++17, e.g., g++ or Clang)
@@ -67,10 +71,6 @@ After compiling, run the executable from the **root project directory** (`reveng
   - `levels/`: Contains level pack files (`.lvl`).
 - `level_editor.html`: A powerful, browser-based tool to create and edit level packs.
 - `settings.txt`: An auto-generated file that stores user settings, like the last selected graphics pack.
-
-## Level Editor (`level_editor.html`)
-
-An in-browser tool to create and modify level packs. Just open the file in a modern web browser.
 
 ### Features
 
