@@ -1,1 +1,1 @@
-graphics=zelda
+graphics=default

@@ -1,0 +1,14 @@
+# Build artifacts
+build/
+*.o
+word_scramble
+
+# IDE specific files
+.vscode/
+*.suo
+*.user
+*.sln
+
+# OS specific files
+.DS_Store
+Thumbs.db

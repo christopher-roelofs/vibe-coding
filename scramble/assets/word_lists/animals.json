@@ -1,0 +1,48 @@
+{
+  "name": "Animals",
+  "author": "Cascade AI",
+  "date": "2025-06-12",
+  "description": "A list of common animal names.",
+  "words": [
+    {
+      "word": "LION",
+      "definition": "A large carnivorous feline that lives in prides."
+    },
+    {
+      "word": "TIGER",
+      "definition": "A large solitary cat with a yellow-brown coat of fur with dark vertical stripes."
+    },
+    {
+      "word": "BEAR",
+      "definition": "A large, heavy mammal that walks on the soles of its feet, with thick fur and a very short tail."
+    },
+    {
+      "word": "ELEPHANT",
+      "definition": "A very large herbivorous mammal with a trunk, large ears, and tusks."
+    },
+    {
+      "word": "MONKEY",
+      "definition": "A small to medium-sized primate that typically has a long tail."
+    },
+    {
+      "word": "GIRAFFE",
+      "definition": "A large African mammal with a very long neck and forelegs, having a coat patterned with brown patches."
+    },
+    {
+      "word": "ZEBRA",
+      "definition": "An African wild horse with black-and-white stripes."
+    },
+    {
+      "word": "KANGAROO",
+      "definition": "A large plant-eating marsupial with a long powerful tail and strongly developed hindlimbs that allow it to travel by leaping."
+    },
+    {
+      "word": "PENGUIN",
+      "definition": "A large flightless seabird of the southern hemisphere, with black and white plumage and a streamlined body for swimming."
+    },
+    {
+      "word": "DOLPHIN",
+      "definition": "A small gregarious toothed whale that typically has a beaklike snout and a curved fin on the back."
+    }
+  ]
+}

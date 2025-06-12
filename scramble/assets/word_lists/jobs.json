@@ -1,0 +1,88 @@
+{
+  "name": "Jobs",
+  "author": "Cascade AI",
+  "date": "2025-06-12",
+  "description": "A list of common jobs and professions.",
+  "words": [
+    {
+      "word": "DOCTOR",
+      "definition": "A person who is qualified to treat people who are ill."
+    },
+    {
+      "word": "TEACHER",
+      "definition": "A person who helps students to acquire knowledge, competence, or virtue."
+    },
+    {
+      "word": "ENGINEER",
+      "definition": "A person who designs, builds, or maintains engines, machines, or structures."
+    },
+    {
+      "word": "ARTIST",
+      "definition": "A person who creates art, such as paintings or sculptures, as a profession."
+    },
+    {
+      "word": "LAWYER",
+      "definition": "A person who practices or studies law; an attorney or a counselor."
+    },
+    {
+      "word": "CHEF",
+      "definition": "A professional cook, typically the chief cook in a restaurant or hotel."
+    },
+    {
+      "word": "PILOT",
+      "definition": "A person who operates the flying controls of an aircraft."
+    },
+    {
+      "word": "FIREMAN",
+      "definition": "A person whose job is to extinguish fires."
+    },
+    {
+      "word": "NURSE",
+      "definition": "A person trained to care for the sick or infirm, especially in a hospital."
+    },
+    {
+      "word": "SCIENTIST",
+      "definition": "A person who is studying or has expert knowledge of one or more of the natural or physical sciences."
+    },
+    {
+      "word": "POLICE",
+      "definition": "A person who is a member of a police force and responsible for enforcing the law."
+    },
+    {
+      "word": "DENTIST",
+      "definition": "A person qualified to treat the diseases and conditions that affect the teeth and gums."
+    },
+    {
+      "word": "FARMER",
+      "definition": "A person who owns or manages a farm."
+    },
+    {
+      "word": "WRITER",
+      "definition": "A person who writes books, stories, or articles as a job or regular occupation."
+    },
+    {
+      "word": "VETERINARIAN",
+      "definition": "A person qualified to treat diseased or injured animals."
+    },
+    {
+      "word": "MECHANIC",
+      "definition": "A person who repairs and maintains machinery, motors, etc."
+    },
+    {
+      "word": "PHOTOGRAPHER",
+      "definition": "A person who takes photographs, especially as a job."
+    },
+    {
+      "word": "ACTOR",
+      "definition": "A person whose profession is acting on the stage, in movies, or on television."
+    },
+    {
+      "word": "BARBER",
+      "definition": "A person who cuts and styles hair as an occupation."
+    },
+    {
+      "word": "LIBRARIAN",
+      "definition": "A person in charge of or assisting in a library."
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "Fruits",
+  "author": "Cascade AI",
+  "date": "2025-06-12",
+  "description": "A list of common fruits.",
+  "words": [
+    {
+      "word": "APPLE",
+      "definition": "A round fruit with firm, white flesh and a green or red skin."
+    },
+    {
+      "word": "BANANA",
+      "definition": "A long curved fruit which grows in clusters and has soft pulpy flesh and yellow skin when ripe."
+    },
+    {
+      "word": "ORANGE",
+      "definition": "A round juicy citrus fruit with a tough bright reddish-yellow rind."
+    },
+    {
+      "word": "GRAPE",
+      "definition": "A berry, typically green (classified as white), purple, red, or black, growing in clusters on a grapevine, eaten as fruit, and used in making wine."
+    },
+    {
+      "word": "STRAWBERRY",
+      "definition": "A sweet soft red fruit with a seed-studded surface."
+    },
+    {
+      "word": "BLUEBERRY",
+      "definition": "A small, round, blue-black berry from a North American shrub."
+    },
+    {
+      "word": "MANGO",
+      "definition": "A fleshy, oval, yellowish-red tropical fruit with a C-shaped seed."
+    },
+    {
+      "word": "PINEAPPLE",
+      "definition": "A large tropical fruit with a tough orange or brownish skin and a top of short, stiff leaves."
+    },
+    {
+      "word": "WATERMELON",
+      "definition": "A large, round or oval-shaped fruit with a thick green rind and sweet, juicy, red or pink flesh containing many black seeds."
+    },
+    {
+      "word": "KIWI",
+      "definition": "A fruit with a thin hairy skin, green flesh, and black seeds."
+    }
+  ]
+}
