@@ -1,7 +1,7 @@
 # Build artifacts
 build/
 *.o
-scramble
+word_scramble
 
 # IDE specific files
 .vscode/

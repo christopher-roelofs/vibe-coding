@@ -8,44 +8,47 @@ SDL_CFLAGS = $(shell sdl2-config --cflags)
 SDL_LIBS = $(shell sdl2-config --libs)
 
 # SDL_ttf flags
-# Ensure SDL2_ttf headers are found. sdl2-config --cflags might cover it.
-# If not, you may need to add something like: -I/opt/homebrew/include/SDL2 or -I/usr/local/include/SDL2
-SDL_TTF_CFLAGS = 
 SDL_TTF_LIBS = -lSDL2_ttf
 
 # Source files and object files
 SRCDIR = src
 OBJDIR = build
-# Find all .cpp files in SRCDIR
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 # Executable name
 TARGET = scramble
 
-# Include paths for project headers
-# $(SRCDIR) allows #include "header.h" for files in src/
-# SDL_CFLAGS should provide paths for SDL headers.
+# Include paths
 INCLUDE_PATHS = -I$(SRCDIR)
 
-# Default target
-all: $(TARGET)
-
-$(TARGET): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS) $(SDL_LIBS) $(SDL_TTF_LIBS)
-
-$(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
-	$(CXX) $(CXXFLAGS) $(SDL_CFLAGS) $(SDL_TTF_CFLAGS) $(INCLUDE_PATHS) -c $< -o $@
-
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
-
-# Clean rule
-clean:
-	rm -rf $(OBJDIR) $(TARGET)
-
-# Run rule
-run: all
-	./$(TARGET)
+# --- Targets ---
 
 .PHONY: all clean run
+
+# Default target: build the executable
+all: $(TARGET)
+
+# Link the executable
+$(TARGET): $(OBJECTS)
+	@echo "Linking..."
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(SDL_LIBS) $(SDL_TTF_LIBS)
+	@echo "Build finished. Run with ./$(TARGET)"
+
+# Compile source files into object files
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
+	@echo "Compiling $<..."
+	$(CXX) $(CXXFLAGS) $(INCLUDE_PATHS) $(SDL_CFLAGS) -c $< -o $@
+
+# Create the build directory
+$(OBJDIR):
+	@mkdir -p $(OBJDIR)
+
+# Clean up build files
+clean:
+	@echo "Cleaning up..."
+	rm -rf $(OBJDIR) $(TARGET)
+
+# Run the executable
+run:
+	./$(TARGET)

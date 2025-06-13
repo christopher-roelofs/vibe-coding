@@ -9,7 +9,7 @@ using json = nlohmann::json;
 
 struct WordEntry {
     std::string word;
-    std::string definition;
+    std::string hint;
 };
 
 struct WordList {

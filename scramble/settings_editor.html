@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Scramble - Settings.ini Editor</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .controls, .preview {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            width: 350px;
+        }
+        .preview {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .mock-screen {
+            border: 1px solid #ccc;
+            padding: 15px;
+            height: 300px; /* Approximate height */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .color-setting {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .color-setting label {
+            margin-right: 10px;
+        }
+        .color-setting input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        .file-ops button, .file-ops input {
+            margin-top: 5px;
+            margin-bottom: 15px;
+            padding: 8px 12px;
+            width: calc(100% - 24px);
+        }
+
+        /* Mock screen elements styling (will be dynamically colored) */
+        .mock-screen {
+            background-color: var(--bg-color, #202020);
+            color: var(--msg-text-color, #FFFFFF); /* Default text color */
+        }
+        .mock-title { color: var(--title-text-color, #FFFFA0); text-align: center; font-size: 1.5em; margin-bottom: 15px; }
+        .mock-list-name { color: var(--list-name-text-color, #FFFFFF); text-align: center; font-size: 1.2em; margin-bottom: 10px; }
+        .mock-list-meta { color: var(--list-meta-text-color, #CCCCCC); text-align: center; font-size: 0.9em; margin-bottom: 5px; }
+        .mock-scrambled-word { color: var(--scrambled-word-text-color, #FFFF00); text-align: center; font-size: 2em; font-weight: bold; margin: 20px 0; }
+        .mock-scrambled-word .cursor { color: var(--scrambled-word-cursor-text-color, #FF00FF); }
+        .mock-guessed-word { color: var(--guessed-word-text-color, #00FF00); text-align: center; font-size: 1.3em; margin-bottom: 15px; }
+        .mock-message { color: var(--msg-text-color, #FFFFFF); text-align: center; margin-bottom: 10px; }
+        .mock-help { color: var(--help-text-color, #A0A0A0); text-align: center; font-size: 0.8em; position: absolute; bottom: 10px; width: calc(100% - 30px); }
+
+    </style>
+</head>
+<body>
+    <h1>Word Scramble - settings.ini Editor</h1>
+
+    <div class="container">
+        <div class="controls">
+            <h2>Controls</h2>
+            <div class="file-ops">
+                <label for="load-ini">Load settings.ini:</label>
+                <input type="file" id="load-ini" accept=".ini">
+            </div>
+
+            <h3>Color Settings</h3>
+            <div id="color-settings-container">
+                <!-- Color pickers will be dynamically added here -->
+            </div>
+
+            <div class="file-ops">
+                <button id="save-ini">Save settings.ini</button>
+            </div>
+        </div>
+
+        <div class="preview">
+            <div class="mock-screen" id="start-screen-mock">
+                <div> <!-- Wrapper for main content -->
+                    <div class="mock-title">Word Scramble</div>
+                    <div class="mock-list-name">Sample List Name</div>
+                    <div class="mock-list-meta">Author: Sample Author</div>
+                    <div class="mock-list-meta">Date: YYYY-MM-DD</div>
+                    <div class="mock-list-meta">A brief description of the list.</div>
+                </div>
+                <div class="mock-help">&lt; Left/Right to Change | Enter to Select &gt;</div>
+            </div>
+
+            <div class="mock-screen" id="game-screen-mock">
+                <div class="mock-list-name" style="font-size: 1.4em; margin-top: 5px;">Sample List Name</div>
+                <div class="mock-scrambled-word">S<span class="cursor">C</span>RAMBLED</div>
+                <div class="mock-guessed-word">GUESSED</div>
+                <div class="mock-message">Correct! Press Enter.</div>
+                <div class="mock-message" style="font-size: 0.9em;">Definition: This is a sample definition.</div>
+                <div class="mock-help">Space: Guess | Backspace: Del | Arrows: Select</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const colorKeys = [
+            { key: 'background', label: 'Background', cssVar: '--bg-color', default: '#202020' },
+            { key: 'title_text', label: 'Title Text', cssVar: '--title-text-color', default: '#FFFFA0' },
+            { key: 'list_name_text', label: 'List Name Text', cssVar: '--list-name-text-color', default: '#FFFFFF' },
+            { key: 'list_meta_text', label: 'List Meta Text', cssVar: '--list-meta-text-color', default: '#CCCCCC' },
+            { key: 'scrambled_word_text', label: 'Scrambled Word', cssVar: '--scrambled-word-text-color', default: '#FFFF00' },
+            { key: 'scrambled_word_cursor_text', label: 'Scrambled Cursor', cssVar: '--scrambled-word-cursor-text-color', default: '#FF00FF' },
+            { key: 'guessed_word_text', label: 'Guessed Word', cssVar: '--guessed-word-text-color', default: '#00FF00' },
+            { key: 'message_text', label: 'Message Text', cssVar: '--msg-text-color', default: '#FFFFFF' },
+            { key: 'help_text', label: 'Help Text', cssVar: '--help-text-color', default: '#A0A0A0' }
+        ];
+
+        const colorSettingsContainer = document.getElementById('color-settings-container');
+        const loadIniInput = document.getElementById('load-ini');
+        const saveIniButton = document.getElementById('save-ini');
+        const root = document.documentElement;
+
+        let currentSettings = {}; // To store [colors]
+        let fontSection = ''; // To store [font] section content
+
+        // Initialize color pickers and set default CSS vars
+        function initializeColorPickers() {
+            colorSettingsContainer.innerHTML = ''; // Clear existing
+            colorKeys.forEach(item => {
+                const div = document.createElement('div');
+                div.classList.add('color-setting');
+
+                const label = document.createElement('label');
+                label.setAttribute('for', `color-${item.key}`);
+                label.textContent = item.label + ':';
+
+                const input = document.createElement('input');
+                input.type = 'color';
+                input.id = `color-${item.key}`;
+                input.value = item.default;
+                currentSettings[item.key] = item.default;
+                root.style.setProperty(item.cssVar, item.default);
+
+                input.addEventListener('input', (event) => {
+                    root.style.setProperty(item.cssVar, event.target.value);
+                    currentSettings[item.key] = event.target.value;
+                });
+
+                div.appendChild(label);
+                div.appendChild(input);
+                colorSettingsContainer.appendChild(div);
+            });
+        }
+
+        loadIniInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    parseIniContent(content);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function parseIniContent(content) {
+            const lines = content.split(/\r?\n/);
+            let inColorsSection = false;
+            let currentFontSectionLines = [];
+            let inFontSection = false;
+
+            currentSettings = {}; // Reset
+            fontSection = '';
+
+            lines.forEach(line => {
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('[colors]')) {
+                    inColorsSection = true;
+                    inFontSection = false;
+                    return;
+                } else if (trimmedLine.startsWith('[font]')) {
+                    inFontSection = true;
+                    inColorsSection = false;
+                    currentFontSectionLines.push(trimmedLine);
+                    return;
+                } else if (trimmedLine.startsWith('[')) { // Other section
+                    inColorsSection = false;
+                    inFontSection = false;
+                }
+
+                if (inColorsSection && trimmedLine.includes('=')) {
+                    const [key, value] = trimmedLine.split('=').map(s => s.trim());
+                    const colorItem = colorKeys.find(ck => ck.key === key);
+                    if (colorItem && value.startsWith('#')) {
+                        document.getElementById(`color-${key}`).value = value;
+                        root.style.setProperty(colorItem.cssVar, value);
+                        currentSettings[key] = value;
+                    }
+                } else if (inFontSection) {
+                    if(trimmedLine) currentFontSectionLines.push(trimmedLine);
+                }
+            });
+            if (currentFontSectionLines.length > 0) {
+                 fontSection = currentFontSectionLines.join('\n');
+            } else {
+                // Default font section if not found in loaded file
+                fontSection = '[font]\nfont=VCR_OSD_MONO.ttf';
+            }
+        }
+
+        saveIniButton.addEventListener('click', () => {
+            let newIniContent = '[colors]\n';
+            colorKeys.forEach(item => {
+                newIniContent += `${item.key}=${currentSettings[item.key] || item.default}\n`;
+            });
+            newIniContent += '\n'; // Add a blank line before the font section
+            if (fontSection) {
+                newIniContent += fontSection + '\n';
+            } else {
+                 newIniContent += '[font]\nfont=VCR_OSD_MONO.ttf\n';
+            }
+
+            const blob = new Blob([newIniContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'settings.ini';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Initial setup
+        initializeColorPickers();
+        // Set a default font section if no file is loaded initially
+        if (!fontSection) {
+             fontSection = '[font]\nfont=VCR_OSD_MONO.ttf';
+        }
+
+    </script>
+</body>
+</html>

@@ -19,10 +19,10 @@ bool WordList::loadFromFile(const std::string& filepath, WordList& out_word_list
 
         if (j.contains("words") && j["words"].is_array()) {
             for (const auto& entry_json : j["words"]) {
-                if (entry_json.is_object() && entry_json.contains("word") && entry_json["word"].is_string() && entry_json.contains("definition") && entry_json["definition"].is_string()) {
+                if (entry_json.is_object() && entry_json.contains("word") && entry_json["word"].is_string() && entry_json.contains("hint") && entry_json["hint"].is_string()) {
                     WordEntry entry;
                     entry.word = entry_json["word"].get<std::string>();
-                    entry.definition = entry_json["definition"].get<std::string>();
+                    entry.hint = entry_json["hint"].get<std::string>();
                     if (!entry.word.empty()) { // Ensure word is not empty
                        out_word_list.words.push_back(entry);
                     }

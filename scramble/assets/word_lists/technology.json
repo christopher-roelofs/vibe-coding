@@ -6,83 +6,83 @@
   "words": [
     {
       "word": "COMPUTER",
-      "definition": "An electronic device for storing and processing data."
+      "hint": "An electronic device for storing and processing data."
     },
     {
       "word": "PROGRAM",
-      "definition": "A set of instructions that a computer follows to perform a task."
+      "hint": "A set of instructions that a computer follows to perform a task."
     },
     {
       "word": "KEYBOARD",
-      "definition": "An input device used to type text and commands into a computer."
+      "hint": "An input device used to type text and commands into a computer."
     },
     {
       "word": "MONITOR",
-      "definition": "A display device that shows visual output from a computer."
+      "hint": "A display device that shows visual output from a computer."
     },
     {
       "word": "SOFTWARE",
-      "definition": "The programs and operating systems used by a computer."
+      "hint": "The programs and operating systems used by a computer."
     },
     {
       "word": "HARDWARE",
-      "definition": "The physical parts of a computer system."
+      "hint": "The physical parts of a computer system."
     },
     {
       "word": "INTERNET",
-      "definition": "A global network connecting millions of computers and devices."
+      "hint": "A global network connecting millions of computers and devices."
     },
     {
       "word": "NETWORK",
-      "definition": "A group of interconnected computers and devices."
+      "hint": "A group of interconnected computers and devices."
     },
     {
       "word": "ALGORITHM",
-      "definition": "A step-by-step procedure for solving a problem or completing a task."
+      "hint": "A step-by-step procedure for solving a problem or completing a task."
     },
     {
       "word": "DATABASE",
-      "definition": "An organized collection of data that can be accessed electronically."
+      "hint": "An organized collection of data that can be accessed electronically."
     },
     {
       "word": "PYTHON",
-      "definition": "A popular high-level programming language."
+      "hint": "A popular high-level programming language."
     },
     {
       "word": "DEBUGGER",
-      "definition": "A tool that helps identify and fix errors in code."
+      "hint": "A tool that helps identify and fix errors in code."
     },
     {
       "word": "BINARY",
-      "definition": "A numbering system using only 0s and 1s, used by computers."
+      "hint": "A numbering system using only 0s and 1s, used by computers."
     },
     {
       "word": "MEMORY",
-      "definition": "Hardware used to store data temporarily or permanently in a computer."
+      "hint": "Hardware used to store data temporarily or permanently in a computer."
     },
     {
       "word": "CIRCUIT",
-      "definition": "A path in which electrons flow to power electronic devices."
+      "hint": "A path in which electrons flow to power electronic devices."
     },
     {
       "word": "FIRMWARE",
-      "definition": "Software programmed into hardware devices."
+      "hint": "Software programmed into hardware devices."
     },
     {
       "word": "TERMINAL",
-      "definition": "A text-based interface used to control a computer system."
+      "hint": "A text-based interface used to control a computer system."
     },
     {
       "word": "SCRIPT",
-      "definition": "A file containing code that automates tasks."
+      "hint": "A file containing code that automates tasks."
     },
     {
       "word": "MODULE",
-      "definition": "A self-contained piece of code that can be reused."
+      "hint": "A self-contained piece of code that can be reused."
     },
     {
       "word": "DEVICE",
-      "definition": "A piece of electronic equipment, such as a smartphone or laptop."
+      "hint": "A piece of electronic equipment, such as a smartphone or laptop."
     }
   ]
 }

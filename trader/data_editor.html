@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Data Editor</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        h1, h2, h3, h4 { color: #333; margin-top: 1em; margin-bottom: 0.5em; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        label { display: block; margin-top: 8px; margin-bottom: 2px; font-weight: bold; font-size: 0.9em; }
+        input[type='text'], input[type='number'], textarea, select {
+            width: calc(100% - 22px);
+            padding: 8px;
+            margin-top: 3px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type='checkbox'] { margin-right: 5px; vertical-align: middle; }
+        textarea { min-height: 60px; }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-right: 5px;
+            font-size: 0.9em;
+        }
+        button:hover { background-color: #0056b3; }
+        .remove-button { background-color: #dc3545; }
+        .remove-button:hover { background-color: #c82333; }
+        .add-button { background-color: #28a745; }
+        .add-button:hover { background-color: #218838; }
+        #fileInputLabel { display: inline-block; margin-bottom: 10px; }
+        #controls { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;}
+        .top-level-section, .array-container, .object-container, .array-element, .field-wrapper {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #fdfdfd;
+        }
+        .array-element, .object-field {
+            margin-left: 20px;
+            border-left: 3px solid #007bff;
+            padding-left: 15px;
+        }
+        .top-level-section > h2 { margin-top: 0; }
+        .field-wrapper label { display: inline-block; min-width: 150px; }
+        .field-wrapper input[type='checkbox'] + label { font-weight: normal; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Game Data Editor</h1>
+
+        <div id="controls">
+            <h2>Load Data</h2>
+            <label id="fileInputLabel" for="jsonFile">Load data.json:</label>
+            <input type="file" id="jsonFile" accept=".json">
+        </div>
+
+        <div id="editorContainer">
+            <p>Load a data.json file to begin editing.</p>
+            <!-- Forms will be injected here -->
+        </div>
+
+        <button id="saveButton" style="display:none;">Save and Download data.json</button>
+    </div>
+
+    <script>
+        let jsonData = null;
+        const jsonFileInput = document.getElementById('jsonFile');
+        const editorContainer = document.getElementById('editorContainer');
+        const saveButton = document.getElementById('saveButton');
+
+        jsonFileInput.addEventListener('change', handleFileUpload);
+        saveButton.addEventListener('click', saveJsonFile);
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        jsonData = JSON.parse(e.target.result);
+                        renderFullEditor();
+                        saveButton.style.display = 'inline-block';
+                    } catch (error) {
+                        alert('Error parsing JSON file: ' + error.message);
+                        jsonData = null;
+                        editorContainer.innerHTML = '<p>Error loading file. Please ensure it is valid JSON.</p>';
+                        saveButton.style.display = 'none';
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function renderFullEditor() {
+            if (!jsonData) {
+                editorContainer.innerHTML = '<p>Load data.json to begin.</p>';
+                return;
+            }
+            editorContainer.innerHTML = ''; // Clear previous content
+
+            Object.keys(jsonData).forEach(topLevelKey => {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'top-level-section';
+                const sectionTitle = document.createElement('h2');
+                sectionTitle.textContent = topLevelKey.charAt(0).toUpperCase() + topLevelKey.slice(1);
+                sectionDiv.appendChild(sectionTitle);
+                renderDataNode(jsonData[topLevelKey], [topLevelKey], sectionDiv);
+                editorContainer.appendChild(sectionDiv);
+            });
+        }
+
+        function renderDataNode(dataNode, currentPath, parentElement) {
+            const pathString = currentPath.join('.');
+
+            if (Array.isArray(dataNode)) {
+                const arrayContainer = document.createElement('div');
+                arrayContainer.className = 'array-container';
+                parentElement.appendChild(arrayContainer);
+
+                const arrayKeyName = currentPath[currentPath.length - 1] || 'element';
+                let singularBaseName = arrayKeyName;
+                if (singularBaseName.endsWith('s')) {
+                    singularBaseName = singularBaseName.substring(0, singularBaseName.length - 1);
+                }
+                singularBaseName = singularBaseName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize words
+
+                dataNode.forEach((element, index) => {
+                    const elementDiv = document.createElement('div');
+                    elementDiv.className = 'array-element';
+                    const elementTitle = document.createElement('h4');
+                    let titleText = `${singularBaseName} ${index}`;
+                    if (typeof element === 'object' && element !== null && element.name) {
+                        titleText = `${singularBaseName} ${index}: ${element.name}`;
+                    } else if (typeof element !== 'object') {
+                        titleText = `${singularBaseName} ${index}: ${element}`;
+                    }
+                    elementTitle.textContent = titleText;
+                    elementDiv.appendChild(elementTitle);
+                    
+                    renderDataNode(element, [...currentPath, index], elementDiv);
+
+                    const removeElementButton = document.createElement('button');
+                    removeElementButton.textContent = `Remove ${singularBaseName} ${index}`;
+                    removeElementButton.className = 'remove-button';
+                    removeElementButton.onclick = () => {
+                        removeItemFromArray(currentPath, index);
+                        renderFullEditor(); 
+                    };
+                    elementDiv.appendChild(removeElementButton);
+                    arrayContainer.appendChild(elementDiv);
+                });
+
+                const addElementButton = document.createElement('button');
+                addElementButton.textContent = `Add New ${singularBaseName}`;
+                addElementButton.className = 'add-button';
+                addElementButton.onclick = () => {
+                    let newElement = {}; 
+                    if (dataNode.length > 0 && typeof dataNode[0] === 'object' && dataNode[0] !== null) {
+                        newElement = JSON.parse(JSON.stringify(dataNode[0])); 
+                        Object.keys(newElement).forEach(k => {
+                            if (typeof newElement[k] === 'string') newElement[k] = "";
+                            else if (typeof newElement[k] === 'number') newElement[k] = 0;
+                            else if (typeof newElement[k] === 'boolean') newElement[k] = false;
+                            else if (Array.isArray(newElement[k])) newElement[k] = [];
+                        });
+                        if(newElement.hasOwnProperty('name')) newElement.name = `New ${singularBaseName}`;
+                    } else if (dataNode.length > 0 && typeof dataNode[0] !== 'object') {
+                         newElement = typeof dataNode[0] === 'number' ? 0 : (typeof dataNode[0] === 'boolean' ? false : "");
+                    } else { // Default for an empty array or if type inference is tricky
+                        if (singularBaseName.toLowerCase() === 'item' || singularBaseName.toLowerCase() === 'city' || singularBaseName.toLowerCase() === 'quest' || singularBaseName.toLowerCase() === 'encounter') {
+                            newElement = { name: `New ${singularBaseName}` }; // Common pattern
+                        }
+                    }
+                    addElementToArray(currentPath, newElement);
+                    renderFullEditor();
+                };
+                arrayContainer.appendChild(addElementButton);
+
+            } else if (typeof dataNode === 'object' && dataNode !== null) {
+                const objectContainer = document.createElement('div');
+                objectContainer.className = 'object-container';
+                parentElement.appendChild(objectContainer);
+
+                Object.keys(dataNode).forEach(key => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'object-field';
+                    renderDataNode(dataNode[key], [...currentPath, key], fieldDiv);
+                    objectContainer.appendChild(fieldDiv);
+                });
+
+                const addKeyButton = document.createElement('button');
+                addKeyButton.textContent = 'Add Key';
+                addKeyButton.className = 'add-button';
+                addKeyButton.onclick = () => {
+                    const newKey = prompt(`Enter new key name for ${pathString}:`);
+                    if (newKey && !dataNode.hasOwnProperty(newKey)) {
+                        setDataByPath([...currentPath, newKey], ""); // Add empty string by default
+                        renderFullEditor();
+                    }
+                };
+                objectContainer.appendChild(addKeyButton);
+
+            } else { // Primitive value
+                const inputId = currentPath.join('_').replace(/[^a-zA-Z0-9_]/g, ''); // Sanitize ID
+                const labelText = currentPath[currentPath.length - 1] + ":";
+                let inputElementWrapper;
+
+                if (typeof dataNode === 'boolean') {
+                    inputElementWrapper = createBooleanField(inputId, labelText, dataNode, (e) => {
+                        setDataByPath(currentPath, e.target.checked);
+                    });
+                } else if (typeof dataNode === 'number') {
+                    inputElementWrapper = createNumberField(inputId, labelText, dataNode, (e) => {
+                        setDataByPath(currentPath, parseFloat(e.target.value));
+                    });
+                } else { // string or other (treat as text)
+                     // Use textarea for longer strings
+                    if (typeof dataNode === 'string' && dataNode.length > 60) {
+                         inputElementWrapper = createTextArea(inputId, labelText, dataNode, (e) => {
+                            setDataByPath(currentPath, e.target.value);
+                        });
+                    } else {
+                        inputElementWrapper = createTextField(inputId, labelText, dataNode, (e) => {
+                            setDataByPath(currentPath, e.target.value);
+                        });
+                    }
+                }
+                parentElement.appendChild(inputElementWrapper);
+            }
+        }
+
+        function setDataByPath(pathArray, value) {
+            let current = jsonData;
+            for (let i = 0; i < pathArray.length - 1; i++) {
+                if (!current[pathArray[i]] && i < pathArray.length -1) { // Create path if not exists
+                    current[pathArray[i]] = (typeof pathArray[i+1] === 'number') ? [] : {};
+                }
+                current = current[pathArray[i]];
+                if (current === undefined) { console.error("Error setting data: path invalid", pathArray); return; }
+            }
+            current[pathArray[pathArray.length - 1]] = value;
+        }
+
+        function removeItemFromArray(pathArray, indexToRemove) {
+            let current = jsonData;
+            for (let i = 0; i < pathArray.length - 1; i++) { current = current[pathArray[i]]; }
+            const arrayKey = pathArray[pathArray.length - 1];
+            if (Array.isArray(current[arrayKey])) {
+                current[arrayKey].splice(indexToRemove, 1);
+            } else { console.error("Cannot remove item, not an array at path:", pathArray); }
+        }
+
+        function addElementToArray(pathArray, newElement) {
+            let current = jsonData;
+            for (let i = 0; i < pathArray.length - 1; i++) { current = current[pathArray[i]]; }
+            const arrayKey = pathArray[pathArray.length - 1];
+            if (Array.isArray(current[arrayKey])) {
+                current[arrayKey].push(newElement);
+            } else { console.error("Cannot add element, not an array at path:", pathArray); }
+        }
+
+        function createField(id, labelText, value, type, eventListener) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'field-wrapper';
+
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.textContent = labelText;
+            
+            let input;
+            if (type === 'textarea') {
+                input = document.createElement('textarea');
+                input.value = value !== null && value !== undefined ? value : '';
+            } else if (type === 'checkbox') {
+                input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = !!value;
+                const checkLabel = document.createElement('label'); // Label for checkbox text itself
+                checkLabel.setAttribute('for', id);
+                checkLabel.textContent = " (True/False)"; 
+                checkLabel.style.fontWeight = 'normal';
+                wrapper.appendChild(input); // Checkbox first
+                wrapper.appendChild(label); // Then its main label
+                wrapper.appendChild(checkLabel); // Then the true/false indicator
+                input.id = id;
+                input.addEventListener('change', eventListener);
+                return wrapper; // Checkbox structure is different
+            } else {
+                input = document.createElement('input');
+                input.type = type;
+                input.value = value !== null && value !== undefined ? value : '';
+            }
+            input.id = id;
+            input.addEventListener('change', eventListener);
+            
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            return wrapper;
+        }
+
+        function createTextField(id, labelText, value, eventListener) { return createField(id, labelText, value, 'text', eventListener); }
+        function createNumberField(id, labelText, value, eventListener) { return createField(id, labelText, value, 'number', eventListener); }
+        function createBooleanField(id, labelText, value, eventListener) { return createField(id, labelText, value, 'checkbox', eventListener); }
+        function createTextArea(id, labelText, value, eventListener) { return createField(id, labelText, value, 'textarea', eventListener); }
+
+        function saveJsonFile() {
+            if (!jsonData) { alert('No data to save.'); return; }
+            const jsonString = JSON.stringify(jsonData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert('data.json prepared for download.');
+        }
+    </script>
+</body>
+</html>

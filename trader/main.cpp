@@ -77,10 +77,23 @@ struct RandomEncounter {
     int money_reward_max;
 };
 
+struct Ingredient {
+    std::string item_name;
+    int quantity;
+};
+
+struct CraftingRecipe {
+    std::string output_item;
+    int output_quantity;
+    std::string category;
+    std::vector<Ingredient> ingredients;
+};
+
 // --- Global Game Variables ---
 GameSettings gameSettings;
 std::vector<Town> towns;
 std::vector<Item> item_templates;
+std::vector<CraftingRecipe> crafting_recipes;
 std::vector<RandomEncounter> random_encounter_templates;
 Player player;
 RandomEncounter current_combat_encounter; // Holds details of the active combat
@@ -95,6 +108,7 @@ enum class GameState {
     Traveling,
     Resting,
     CombatEncounter, // New state for random combat
+    Crafting,
     GameOver,
     ErrorScreen
 };
@@ -108,6 +122,7 @@ std::string errorMessage = "";
 // Menu selection
 int mainMenu_selectedOption = 0;
 int inTown_selectedOption = 0;
+int crafting_selectedRecipeIndex = 0;
 int resting_selectedOption = 0;
 int quests_selectedOption = 0;
 int inventory_selectedOption = 0;
@@ -132,6 +147,30 @@ const Item* getItemTemplateByName(const std::string& name); // Helper to find it
 void closeSDL();
 void renderText(const std::string& text, int x, int y, bool centered = false);
 
+void renderTextWithColor(const std::string& text, int x, int y, SDL_Color color, bool center = false) {
+    if (text.empty()) return;
+    SDL_Surface* textSurface = TTF_RenderText_Solid(gFont, text.c_str(), color);
+    if (!textSurface) {
+        printf("Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError());
+        return;
+    }
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
+    if (!textTexture) {
+        printf("Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError());
+        SDL_FreeSurface(textSurface);
+        return;
+    }
+    int text_width = textSurface->w;
+    int text_height = textSurface->h;
+    SDL_FreeSurface(textSurface);
+    SDL_Rect renderQuad = {x, y, text_width, text_height};
+    if (center) {
+        renderQuad.x = (SCREEN_WIDTH - text_width) / 2;
+    }
+    SDL_RenderCopy(gRenderer, textTexture, NULL, &renderQuad);
+    SDL_DestroyTexture(textTexture);
+}
+
 // --- Game State Rendering ---
 void renderMainMenu();
 void renderInTown();
@@ -143,6 +182,7 @@ void renderInventory();
 void renderTraveling();
 void renderUI();
 void renderCombatEncounter(); // For new combat state
+void renderCrafting();
 
 // --- Game State Input Handling ---
 void handleInput(SDL_Event& e, bool& quit);
@@ -155,6 +195,7 @@ void handleInput_QuestOutcome(SDL_Event& e);
 void handleInput_Inventory(SDL_Event& e);
 void handleInput_Traveling(SDL_Event& e);
 void handleInput_CombatEncounter(SDL_Event& e); // For new combat state
+void handleInput_Crafting(SDL_Event& e);
 
 // --- Main Game Loop ---
 int main(int argc, char* args[]) {
@@ -189,6 +230,7 @@ int main(int argc, char* args[]) {
             case GameState::Inventory: renderInventory(); break;
             case GameState::Traveling: renderTraveling(); break;
             case GameState::CombatEncounter: renderCombatEncounter(); break;
+            case GameState::Crafting: renderCrafting(); break;
             case GameState::ErrorScreen:
                 renderText("Error", 0, 50, true);
                 renderText(errorMessage, 10, 150);
@@ -230,6 +272,32 @@ void closeSDL() {
     SDL_DestroyWindow(gWindow);
     TTF_Quit();
     SDL_Quit();
+}
+
+void loadCraftingRecipes(const json& data) {
+    crafting_recipes.clear();
+    if (data.contains("crafting_recipes")) {
+        for (const auto& recipe_json : data["crafting_recipes"]) {
+            CraftingRecipe recipe;
+            recipe.output_item = recipe_json.value("output_item", "");
+            recipe.output_quantity = recipe_json.value("output_quantity", 1);
+            recipe.category = recipe_json.value("category", "Misc");
+            if (recipe_json.contains("ingredients")) {
+                for (const auto& ingredient_json : recipe_json["ingredients"]) {
+                    Ingredient ing;
+                    ing.item_name = ingredient_json.value("item_name", "");
+                    ing.quantity = ingredient_json.value("quantity", 0);
+                    if (!ing.item_name.empty() && ing.quantity > 0) {
+                        recipe.ingredients.push_back(ing);
+                    }
+                }
+            }
+            if (!recipe.output_item.empty() && !recipe.ingredients.empty()) {
+                crafting_recipes.push_back(recipe);
+            }
+        }
+        std::cout << "Loaded " << crafting_recipes.size() << " crafting recipes." << std::endl;
+    }
 }
 
 bool loadGameData() {
@@ -296,6 +364,8 @@ bool loadGameData() {
                 random_encounter_templates.push_back(newEncounter);
             }
         }
+
+        loadCraftingRecipes(data);
 
         if (data.contains("quest_rewards")) {
             quest_rewards_json = data["quest_rewards"];
@@ -369,7 +439,7 @@ void renderInTown() {
     renderText(towns[current_town_index].name, 0, 50, true);
     renderText(towns[current_town_index].description, 0, 80, true);
 
-    const std::vector<std::string> options = {"Store", "Quests", "Inventory", "Travel", "Rest"};
+    const std::vector<std::string> options = {"Store", "Quests", "Inventory", "Travel", "Rest", "Crafting"};
     for (size_t i = 0; i < options.size(); ++i) {
         renderText((inTown_selectedOption == static_cast<int>(i) ? "> " : "") + options[i], 50, 180 + (i * 30));
     }
@@ -415,6 +485,7 @@ void handleInput(SDL_Event& e, bool& quit) {
         case GameState::Inventory: handleInput_Inventory(e); break;
         case GameState::Traveling: handleInput_Traveling(e); break;
         case GameState::CombatEncounter: handleInput_CombatEncounter(e); break;
+        case GameState::Crafting: handleInput_Crafting(e); break;
         case GameState::ErrorScreen:
             if (e.key.keysym.sym == SDLK_q) quit = true;
             break;
@@ -450,7 +521,7 @@ void handleInput_MainMenu(SDL_Event& e, bool& quit) {
 
 void handleInput_InTown(SDL_Event& e) {
     if (e.type != SDL_KEYDOWN) return;
-    const int numOptions = 5;
+    const int numOptions = 6;
 
     switch (e.key.keysym.sym) {
         case SDLK_UP:
@@ -482,6 +553,9 @@ void handleInput_InTown(SDL_Event& e) {
                 case 4: // Rest
                     resting_selectedOption = 0;
                     currentState = GameState::Resting;
+                    break;
+                case 5: // Crafting
+                    currentState = GameState::Crafting;
                     break;
             }
             break;
@@ -952,6 +1026,116 @@ void renderCombatEncounter() {
     for (size_t i = 0; i < options.size(); ++i) {
         std::string prefix = (static_cast<int>(i) == combat_selectedOption) ? "> " : "  ";
         renderText(prefix + options[i], 50, options_y_start + i * 30);
+    }
+}
+
+bool canCraft(const CraftingRecipe& recipe) {
+    for (const auto& ingredient : recipe.ingredients) {
+        if (player.inventory.find(ingredient.item_name) == player.inventory.end() || player.inventory.at(ingredient.item_name) < ingredient.quantity) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void renderCrafting() {
+    renderText("Crafting Menu", 0, 50, true);
+
+    if (crafting_recipes.empty()) {
+        renderText("No crafting recipes known.", 10, 100);
+    } else {
+        // --- Left Panel: Recipe List ---
+        int list_x = 10;
+        int list_y_start = 100;
+        renderText("Craftable Items", list_x, list_y_start - 25);
+        
+        for (size_t i = 0; i < crafting_recipes.size(); ++i) {
+            const auto& recipe = crafting_recipes[i];
+            bool playerCanCraft = canCraft(recipe);
+            SDL_Color color = playerCanCraft ? 
+                (static_cast<int>(i) == crafting_selectedRecipeIndex ? SDL_Color{255, 255, 0, 255} : SDL_Color{255, 255, 255, 255}) : 
+                SDL_Color{128, 128, 128, 255};
+
+            std::string recipe_text = (static_cast<int>(i) == crafting_selectedRecipeIndex ? "> " : "  ");
+            recipe_text += recipe.output_item;
+            renderTextWithColor(recipe_text, list_x, list_y_start + (i * 25), color);
+        }
+
+        // --- Right Panel: Selected Recipe Details ---
+        int details_x = 280;
+        int details_y_start = 100;
+        renderText("Recipe Details", details_x, details_y_start - 25);
+
+        if (crafting_selectedRecipeIndex < crafting_recipes.size()) {
+            const auto& selected_recipe = crafting_recipes[crafting_selectedRecipeIndex];
+            
+            std::string output_text = "Makes: " + selected_recipe.output_item + " (x" + std::to_string(selected_recipe.output_quantity) + ")";
+            renderText(output_text, details_x, details_y_start);
+
+            renderText("Requires:", details_x, details_y_start + 30);
+            int ingredient_y_offset = details_y_start + 55;
+            for (const auto& ingredient : selected_recipe.ingredients) {
+                std::string ingredient_text = "- " + ingredient.item_name + " (" + std::to_string(ingredient.quantity) + ")";
+                int player_has = player.inventory.count(ingredient.item_name) ? player.inventory.at(ingredient.item_name) : 0;
+                ingredient_text += " [Have: " + std::to_string(player_has) + "]";
+                
+                SDL_Color ingredient_color = (player_has >= ingredient.quantity) ? SDL_Color{0, 255, 0, 255} : SDL_Color{255, 0, 0, 255};
+                renderTextWithColor(ingredient_text, details_x + 15, ingredient_y_offset, ingredient_color);
+                ingredient_y_offset += 25;
+            }
+        }
+    }
+
+    // --- Footer ---
+    if (!outcome_log.empty()) {
+        renderText(outcome_log.back(), 10, SCREEN_HEIGHT - 70);
+    }
+    renderText("Press ENTER to craft, ESC to return.", 10, SCREEN_HEIGHT - 40);
+}
+
+void handleInput_Crafting(SDL_Event& e) {
+    if (e.type != SDL_KEYDOWN) return;
+
+    switch (e.key.keysym.sym) {
+        case SDLK_UP:
+            if (!crafting_recipes.empty()) {
+                crafting_selectedRecipeIndex = (crafting_selectedRecipeIndex - 1 + crafting_recipes.size()) % crafting_recipes.size();
+                outcome_log.clear();
+            }
+            break;
+        case SDLK_DOWN:
+            if (!crafting_recipes.empty()) {
+                crafting_selectedRecipeIndex = (crafting_selectedRecipeIndex + 1) % crafting_recipes.size();
+                outcome_log.clear();
+            }
+            break;
+        case SDLK_RETURN:
+        case SDLK_KP_ENTER:
+            if (!crafting_recipes.empty() && crafting_selectedRecipeIndex < crafting_recipes.size()) {
+                const auto& recipe = crafting_recipes[crafting_selectedRecipeIndex];
+                if (canCraft(recipe)) {
+                    // Consume ingredients
+                    for (const auto& ingredient : recipe.ingredients) {
+                        player.inventory[ingredient.item_name] -= ingredient.quantity;
+                        if (player.inventory[ingredient.item_name] == 0) {
+                            player.inventory.erase(ingredient.item_name);
+                        }
+                    }
+                    // Add output item
+                    player.inventory[recipe.output_item] += recipe.output_quantity;
+                    outcome_log.clear();
+                    outcome_log.push_back("You crafted " + std::to_string(recipe.output_quantity) + "x " + recipe.output_item + ".");
+                } else {
+                     outcome_log.clear();
+                     outcome_log.push_back("You don't have the required ingredients.");
+                }
+            }
+            break;
+        case SDLK_ESCAPE:
+            outcome_log.clear(); // Clear any crafting messages
+            crafting_selectedRecipeIndex = 0; // Reset selection
+            currentState = GameState::InTown;
+            break;
     }
 }
 

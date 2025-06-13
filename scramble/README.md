@@ -8,7 +8,7 @@ A fun and challenging word scramble game built with C++ and the SDL2 library. Te
 *   **Configurable Appearance:** Customize game colors using the `settings.ini` file or the provided `settings_editor.html`.
 *   **Simple Controls:** Uses keyboard input for easy navigation and gameplay.
 *   **Cross-Platform:** Built with SDL2, making it potentially portable to other operating systems.
-*   **[Settings Editor](https://christopher-roelofs.github.io/vibe-coding/settings_editor.html):** A standalone HTML tool (`settings_editor.html`) allows for easy visual editing of color schemes in `settings.ini`.
+*   **Settings Editor:** A standalone HTML tool (`settings_editor.html`) allows for easy visual editing of color schemes in `settings.ini`.
 
 ## Prerequisites
 
@@ -35,14 +35,14 @@ Before you can build and play Word Scramble, you'll need the following installed
     ```bash
     make
     ```
-    This will compile the source files and create an executable named `scramble` in the project's root directory.
+    This will compile the source files and create an executable named `word_scramble` in the project's root directory.
 
 ## Running the Game
 
 After successful compilation, you can run the game from the project's root directory:
 
 ```bash
-./scramble
+./word_scramble
 ```
 
 ## Configuration

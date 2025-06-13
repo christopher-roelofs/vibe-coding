@@ -24,7 +24,8 @@ Game::Game() :
     running_(false),
     selected_char_index_scrambled_(0),
     game_message_(""),
-    definition_message_(""),
+    m_currentHintText(""),
+    m_showHint(false),
     message_display_start_time_(0)
 {}
 
@@ -198,7 +199,8 @@ void Game::prepareNewWord() {
     current_guess_ = "";
     selected_char_index_scrambled_ = 0;
     game_message_ = ""; // Clear any previous game message
-    definition_message_ = ""; // Also clear the definition
+    m_currentHintText = current_word_entry_.hint;
+    m_showHint = false;
 }
 
 
@@ -222,7 +224,7 @@ void Game::processInput() {
                 if (current_state_ == GameState::GAME_SCREEN || current_state_ == GameState::RESULTS_SCREEN) {
                     current_state_ = GameState::START_SCREEN;
                     game_message_ = ""; // Clear any messages
-                    definition_message_ = "";
+                    m_showHint = false; // Also hide hint
                 } else { // START_SCREEN
                     running_ = false;
                 }
@@ -279,7 +281,7 @@ void Game::processInput() {
                         if (current_guess_.length() == current_word_entry_.word.length()) {
                             if (current_guess_ == current_word_entry_.word) {
                                 game_message_ = "Correct! Press Enter for next word.";
-                                definition_message_ = current_word_entry_.definition;
+                                // Hint is now shown with 'H' key
                                 current_state_ = GameState::RESULTS_SCREEN;
                                 message_display_start_time_ = SDL_GetTicks();
                             } else {
@@ -287,6 +289,8 @@ void Game::processInput() {
                                 message_display_start_time_ = SDL_GetTicks();
                             }
                         }
+                    } else if (event.key.keysym.sym == SDLK_h) {
+                        m_showHint = !m_showHint;
                     }
                     break;
                 }
@@ -436,15 +440,16 @@ void Game::render() {
             }
         }
 
-        // Display definition message only in results screen
-        if (!definition_message_.empty() && current_state_ == GameState::RESULTS_SCREEN) {
-            renderText(definition_message_, 320, 300, color_message_text_, true, nullptr, 600);
+        // Display Hint if toggled
+        if (m_showHint && !m_currentHintText.empty()) {
+            renderText(m_currentHintText, 320, 270, color_message_text_, true, nullptr, 600);
         }
 
         // Render hints
         renderText("Spacebar to Guess", 320, 380, color_help_text_, true);
         renderText("Backspace to Delete", 320, 400, color_help_text_, true);
-        renderText("Arrows: Select | Enter: Use Char", 320, 460, color_help_text_, true, nullptr, 600);
+        renderText("H for Hint", 320, 420, color_help_text_, true);
+        renderText("Arrows: Select | Enter: Use Char", 320, 440, color_help_text_, true, nullptr, 600);
     }
 
     SDL_RenderPresent(renderer_);

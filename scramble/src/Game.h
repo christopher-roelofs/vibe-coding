@@ -60,7 +60,8 @@ private:
     size_t selected_char_index_scrambled_; // Index in scrambled_display_word_ for selection cursor
     
     std::string game_message_;
-    std::string definition_message_;
+    std::string m_currentHintText; // Stores the hint for the current word
+    bool m_showHint; // Flag to control hint visibility
     Uint32 message_display_start_time_;
     const Uint32 MESSAGE_DISPLAY_DURATION = 3000; // 3 seconds
 
