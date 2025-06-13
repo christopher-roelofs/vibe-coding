@@ -9,7 +9,8 @@
     "hotel_cost": 50,
     "hotel_hp_recovery": 50,
     "camp_hp_recovery": 15,
-    "camp_encounter_chance": 0.25
+    "camp_encounter_chance": 0.25,
+    "travel_encounter_chance": 0.10
   },
   "towns": [
     {
@@ -40,6 +41,34 @@
     { "name": "9mm Ammo", "type": "ammo", "base_price": 5, "effect_description": "Ammunition for a 9mm pistol." },
     { "name": "MRE", "type": "Food", "base_price": 25, "effect_description": "Meal-Ready-to-Eat. Recovers 15 HP.", "data": { "hp_recovery": 15 } },
     { "name": "First-Aid Kit", "type": "Medicine", "base_price": 80, "effect_description": "Comprehensive medical kit. Recovers 40 HP.", "data": { "hp_recovery": 40 } }
+  ],
+  "random_encounters": [
+    {
+      "name": "Weak Raider Attack",
+      "message": "A lone, desperate raider attacks!",
+      "enemy_hp": 15,
+      "enemy_min_damage": 2,
+      "enemy_max_damage": 5,
+      "xp_reward": 10,
+      "item_rewards": [
+        {"item_name": "Scrap Metal", "quantity": 1, "probability": 0.3}
+      ],
+      "money_reward_min": 0,
+      "money_reward_max": 10
+    },
+    {
+      "name": "Mutated Dog Pack",
+      "message": "A pack of snarling, mutated dogs circle you!",
+      "enemy_hp": 25,
+      "enemy_min_damage": 4,
+      "enemy_max_damage": 8,
+      "xp_reward": 20,
+      "item_rewards": [
+        {"item_name": "Canned Food", "quantity": 1, "probability": 0.2}
+      ],
+      "money_reward_min": 0,
+      "money_reward_max": 5
+    }
   ],
   "quest_rewards": {
     "Scavenge the Old Mall": [

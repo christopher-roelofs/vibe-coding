@@ -10,6 +10,7 @@
 #include <fstream>
 #include <map>
 #include "json.hpp"
+#include <algorithm> // For std::min/max
 
 using json = nlohmann::json;
 
@@ -29,6 +30,7 @@ struct GameSettings {
     int initial_money, initial_health, max_health, initial_hold_space;
     int time_units_per_day, hotel_cost, hotel_hp_recovery, camp_hp_recovery;
     double camp_encounter_chance;
+    double travel_encounter_chance; // Chance of encounter during travel
 };
 
 struct Quest {
@@ -52,13 +54,36 @@ struct Item {
 struct Player {
     int health, max_health, money, hold_space;
     std::map<std::string, int> inventory;
+    std::string equipped_weapon_name; // Name of the currently equipped weapon
+    int xp = 0;
+    int level = 1;
+};
+
+struct RandomEncounterItemReward {
+    std::string item_name;
+    int quantity;
+    double probability;
+};
+
+struct RandomEncounter {
+    std::string name;
+    std::string message;
+    int enemy_hp;
+    int enemy_min_damage;
+    int enemy_max_damage;
+    int xp_reward;
+    std::vector<RandomEncounterItemReward> item_rewards;
+    int money_reward_min;
+    int money_reward_max;
 };
 
 // --- Global Game Variables ---
 GameSettings gameSettings;
 std::vector<Town> towns;
 std::vector<Item> item_templates;
+std::vector<RandomEncounter> random_encounter_templates;
 Player player;
+RandomEncounter current_combat_encounter; // Holds details of the active combat
 
 enum class GameState {
     MainMenu,
@@ -69,6 +94,7 @@ enum class GameState {
     Inventory,
     Traveling,
     Resting,
+    CombatEncounter, // New state for random combat
     GameOver,
     ErrorScreen
 };
@@ -86,6 +112,7 @@ int resting_selectedOption = 0;
 int quests_selectedOption = 0;
 int inventory_selectedOption = 0;
 int travel_selectedOption = 0;
+int combat_selectedOption = 0; // For combat screen
 std::vector<std::string> outcome_log;
 
 // Store state
@@ -101,6 +128,7 @@ bool loadGameData();
 void initializeNewGame();
 void generateStoreInventory();
 void advanceTime(int units);
+const Item* getItemTemplateByName(const std::string& name); // Helper to find item by name
 void closeSDL();
 void renderText(const std::string& text, int x, int y, bool centered = false);
 
@@ -114,6 +142,7 @@ void renderQuestOutcome();
 void renderInventory();
 void renderTraveling();
 void renderUI();
+void renderCombatEncounter(); // For new combat state
 
 // --- Game State Input Handling ---
 void handleInput(SDL_Event& e, bool& quit);
@@ -125,6 +154,7 @@ void handleInput_Quests(SDL_Event& e);
 void handleInput_QuestOutcome(SDL_Event& e);
 void handleInput_Inventory(SDL_Event& e);
 void handleInput_Traveling(SDL_Event& e);
+void handleInput_CombatEncounter(SDL_Event& e); // For new combat state
 
 // --- Main Game Loop ---
 int main(int argc, char* args[]) {
@@ -158,6 +188,7 @@ int main(int argc, char* args[]) {
             case GameState::OnQuest: renderQuestOutcome(); break;
             case GameState::Inventory: renderInventory(); break;
             case GameState::Traveling: renderTraveling(); break;
+            case GameState::CombatEncounter: renderCombatEncounter(); break;
             case GameState::ErrorScreen:
                 renderText("Error", 0, 50, true);
                 renderText(errorMessage, 10, 150);
@@ -214,7 +245,8 @@ bool loadGameData() {
             s["game_title"],
             s["initial_money"], s["initial_health"], s["max_health"], s["initial_hold_space"],
             s["time_units_per_day"], s["hotel_cost"], s["hotel_hp_recovery"], s["camp_hp_recovery"],
-            s["camp_encounter_chance"]
+            s["camp_encounter_chance"],
+            s.value("travel_encounter_chance", 0.05) // Default to 0.05 if not present
         };
 
         for (const auto& town_json : data["towns"]) {
@@ -237,6 +269,34 @@ bool loadGameData() {
             newItem.data = item_json.value("data", json::object());
             item_templates.push_back(newItem);
         }
+
+        if (data.contains("random_encounters")) {
+            for (const auto& encounter_json : data["random_encounters"]) {
+                RandomEncounter newEncounter;
+                newEncounter.name = encounter_json.value("name", "Unknown Encounter");
+                newEncounter.message = encounter_json.value("message", "Something happens!");
+                newEncounter.enemy_hp = encounter_json.value("enemy_hp", 10);
+                newEncounter.enemy_min_damage = encounter_json.value("enemy_min_damage", 1);
+                newEncounter.enemy_max_damage = encounter_json.value("enemy_max_damage", 5);
+                newEncounter.xp_reward = encounter_json.value("xp_reward", 0);
+                newEncounter.money_reward_min = encounter_json.value("money_reward_min", 0);
+                newEncounter.money_reward_max = encounter_json.value("money_reward_max", 0);
+
+                if (encounter_json.contains("item_rewards")) {
+                    for (const auto& reward_json : encounter_json["item_rewards"]) {
+                        RandomEncounterItemReward newReward;
+                        newReward.item_name = reward_json.value("item_name", "");
+                        newReward.quantity = reward_json.value("quantity", 1);
+                        newReward.probability = reward_json.value("probability", 0.0);
+                        if (!newReward.item_name.empty()) {
+                            newEncounter.item_rewards.push_back(newReward);
+                        }
+                    }
+                }
+                random_encounter_templates.push_back(newEncounter);
+            }
+        }
+
         if (data.contains("quest_rewards")) {
             quest_rewards_json = data["quest_rewards"];
         }
@@ -254,6 +314,9 @@ void initializeNewGame() {
     player.money = gameSettings.initial_money;
     player.hold_space = gameSettings.initial_hold_space;
     player.inventory.clear();
+    player.equipped_weapon_name = ""; // Player starts unarmed
+    player.xp = 0;
+    player.level = 1;
     current_day = 1;
     current_time = 0;
     current_town_index = 0;
@@ -265,6 +328,16 @@ void advanceTime(int units) {
         current_day += current_time / gameSettings.time_units_per_day;
         current_time %= gameSettings.time_units_per_day;
     }
+}
+
+// Helper function to find an item template by its name
+const Item* getItemTemplateByName(const std::string& name) {
+    for (const auto& item_template : item_templates) {
+        if (item_template.name == name) {
+            return &item_template;
+        }
+    }
+    return nullptr; // Not found
 }
 
 void renderText(const std::string& text, int x, int y, bool centered) {
@@ -306,7 +379,7 @@ void renderResting() {
     renderText("Where to rest?", 0, 50, true);
 
     std::string hotel_option = "Hotel (Cost: " + std::to_string(gameSettings.hotel_cost) + " | HP Gain: " + std::to_string(gameSettings.hotel_hp_recovery) + ")";
-    std::string camp_option = "Camp (Free | HP Gain: " + std::to_string(gameSettings.camp_hp_recovery) + " | " + std::to_string(static_cast<int>(gameSettings.camp_encounter_chance)) + "% Encounter)";
+    std::string camp_option = "Camp (Free | HP Gain: " + std::to_string(gameSettings.camp_hp_recovery) + " | " + std::to_string(static_cast<int>(gameSettings.camp_encounter_chance * 100.0)) + "% Encounter)";
     std::string back_option = "Back to Town";
 
     renderText((resting_selectedOption == 0 ? "> " : "") + hotel_option, 50, 150);
@@ -341,6 +414,7 @@ void handleInput(SDL_Event& e, bool& quit) {
         case GameState::OnQuest: handleInput_QuestOutcome(e); break;
         case GameState::Inventory: handleInput_Inventory(e); break;
         case GameState::Traveling: handleInput_Traveling(e); break;
+        case GameState::CombatEncounter: handleInput_CombatEncounter(e); break;
         case GameState::ErrorScreen:
             if (e.key.keysym.sym == SDLK_q) quit = true;
             break;
@@ -445,19 +519,14 @@ void handleInput_Resting(SDL_Event& e) {
                         int time_to_advance = (gameSettings.time_units_per_day - current_time);
                         advanceTime(time_to_advance);
                         player.health = std::min(player.max_health, player.health + gameSettings.camp_hp_recovery);
-                        if ((static_cast<float>(rand()) / RAND_MAX) < gameSettings.camp_encounter_chance) {
-                            int hp_loss = 5 + (rand() % 6); // 5-10 HP loss
-                            player.health -= hp_loss;
-                            outcome_log.clear();
-                            outcome_log.push_back("Attacked by zombies while sleeping!");
-                            outcome_log.push_back("Lost " + std::to_string(hp_loss) + " HP.");
-                            if (player.health <= 0) {
-                                player.health = 0;
-                                currentState = GameState::GameOver;
-                            } else {
-                                currentState = GameState::OnQuest; // Reuse outcome screen
-                            }
+                        if (!random_encounter_templates.empty() && (static_cast<float>(rand()) / RAND_MAX) < gameSettings.camp_encounter_chance) {
+                            // Trigger a random combat encounter
+                            current_combat_encounter = random_encounter_templates[rand() % random_encounter_templates.size()];
+                            // outcome_log.clear(); // Clear previous outcome messages if any
+                            // outcome_log.push_back(current_combat_encounter.message); // Optional: set initial message
+                            currentState = GameState::CombatEncounter;
                         } else {
+                            // No encounter, or no encounter templates defined
                             currentState = GameState::InTown;
                         }
                     }
@@ -663,10 +732,11 @@ void handleInput_QuestOutcome(SDL_Event& e) {
 
 void renderInventory() {
     renderText("Inventory", 0, 50, true);
+    renderText("Equipped: " + (player.equipped_weapon_name.empty() ? "None" : player.equipped_weapon_name), 50, 80); // Display equipped weapon
     if (player.inventory.empty()) {
         renderText("Your inventory is empty.", 0, 150, true);
     } else {
-        int y_pos = 120;
+        int y_pos = 140; // Adjusted y_pos for new line
         int current_item_index = 0;
         std::vector<std::string> player_items;
         for(const auto& pair : player.inventory) {
@@ -695,7 +765,29 @@ void renderInventory() {
             }
         }
     }
-    renderText("Enter: Use, Esc: Back", 50, SCREEN_HEIGHT - 40);
+    // Determine action text for help
+    std::string help_action_text = "Use";
+    if (!player.inventory.empty()) {
+        std::vector<std::string> current_player_items_list;
+        for(const auto& pair : player.inventory) {
+            current_player_items_list.push_back(pair.first);
+        }
+
+        if (inventory_selectedOption >= 0 && inventory_selectedOption < current_player_items_list.size()) {
+            std::string selected_item_name_for_help = current_player_items_list[inventory_selectedOption];
+            const Item* item_tpl_for_help = nullptr;
+            for (const auto& tpl : item_templates) {
+                if (tpl.name == selected_item_name_for_help) {
+                    item_tpl_for_help = &tpl;
+                    break;
+                }
+            }
+            if (item_tpl_for_help && item_tpl_for_help->type == "weapon") {
+                help_action_text = "Equip";
+            }
+        }
+    }
+    renderText("Enter: " + help_action_text + ", Esc: Back", 50, SCREEN_HEIGHT - 40);
 }
 
 void handleInput_Inventory(SDL_Event& e) {
@@ -733,16 +825,25 @@ void handleInput_Inventory(SDL_Event& e) {
                     }
                 }
 
-                if (item_template && (item_template->type == "Food" || item_template->type == "Medicine" || item_template->type == "food")) {
-                    player.health += item_template->data.value("hp_recovery", 0);
-                    if (player.health > player.max_health) {
-                        player.health = player.max_health;
-                    }
-                    player.inventory[item_name]--;
-                    if (player.inventory[item_name] <= 0) {
-                        player.inventory.erase(item_name);
-                        if (inventory_selectedOption >= player.inventory.size() && !player.inventory.empty()) {
-                            inventory_selectedOption = player.inventory.size() - 1;
+                if (item_template) { // Check if item_template is valid
+                    if (item_template->type == "weapon") {
+                        player.equipped_weapon_name = item_template->name;
+                        // You could add a message here like: errorMessage = "Equipped " + item_template->name;
+                    } else if (item_template->type == "Food" || item_template->type == "Medicine" || item_template->type == "food") {
+                        player.health += item_template->data.value("hp_recovery", 0);
+                        if (player.health > player.max_health) {
+                            player.health = player.max_health;
+                        }
+                        player.inventory[item_name]--; // item_name is defined earlier in this scope
+                        if (player.inventory[item_name] <= 0) {
+                            player.inventory.erase(item_name);
+                            // Adjust selection if the list size changed
+                            if (player.inventory.empty()) {
+                                inventory_selectedOption = 0; // Reset if inventory becomes empty
+                            } else if (inventory_selectedOption >= player.inventory.size()) {
+                                // This covers the case where the last item was removed, or any item that shifts the index
+                                inventory_selectedOption = player.inventory.size() - 1;
+                            }
                         }
                     }
                 }
@@ -793,7 +894,16 @@ void handleInput_Traveling(SDL_Event& e) {
             if (travel_target != -1) {
                 current_town_index = travel_target;
                 advanceTime(4); // Travel takes 4 time units
-                currentState = GameState::InTown;
+
+                // Check for random encounter during travel
+                if (!random_encounter_templates.empty() && (static_cast<float>(rand()) / RAND_MAX) < gameSettings.travel_encounter_chance) {
+                    current_combat_encounter = random_encounter_templates[rand() % random_encounter_templates.size()];
+                    outcome_log.clear(); // Clear previous logs before combat
+                    combat_selectedOption = 0; // Reset combat selection
+                    currentState = GameState::CombatEncounter;
+                } else {
+                    currentState = GameState::InTown;
+                }
             }
             break;
         case SDLK_ESCAPE:
@@ -802,6 +912,158 @@ void handleInput_Traveling(SDL_Event& e) {
     }
 }
 
+void renderCombatEncounter() {
+    renderText("--- Combat Encounter ---", SCREEN_WIDTH / 2, 60, true); // Lowered title
+    renderText(current_combat_encounter.message, SCREEN_WIDTH / 2, 90, true); // Lowered encounter message
+
+    renderText("Enemy: " + current_combat_encounter.name, 50, 130); // Lowered enemy stats
+    renderText("HP: " + std::to_string(current_combat_encounter.enemy_hp), 50, 150);
+
+    // Player stats moved further left and lowered
+    renderText("Player HP: " + std::to_string(player.health) + "/" + std::to_string(player.max_health), SCREEN_WIDTH - 240, 130);
+    renderText("XP: " + std::to_string(player.xp), SCREEN_WIDTH - 240, 150);
+    renderText("Lvl: " + std::to_string(player.level), SCREEN_WIDTH - 240, 170);
+
+    // Display combat log messages from outcome_log
+    int log_y_start = 200; // Lowered log start position
+    int line_height = 20;
+    int max_log_lines = 6; // Reduced max log lines slightly to ensure fit
+    size_t log_start_index = 0;
+    if (outcome_log.size() > static_cast<size_t>(max_log_lines)) {
+        log_start_index = outcome_log.size() - max_log_lines;
+    }
+
+    for (size_t i = 0; i < outcome_log.size() - log_start_index; ++i) {
+        renderText(outcome_log[log_start_index + i], 50, log_y_start + i * line_height);
+    }
+
+    std::vector<std::string> options = {"Attack", "Flee"}; // Add "Use Item" later
+    // Ensure options_y_start is below the log, but not too low
+    int options_y_start = log_y_start + (max_log_lines * line_height) + 10; // Place options below the full potential log space
+    if (options_y_start > SCREEN_HEIGHT - 70) { // Cap to prevent going off bottom
+        options_y_start = SCREEN_HEIGHT - 70;
+    }
+    // If log is very short, options might be too high, so ensure a minimum Y
+    if (options_y_start < SCREEN_HEIGHT - 90) {
+        options_y_start = SCREEN_HEIGHT - 90;
+    }
+
+
+    for (size_t i = 0; i < options.size(); ++i) {
+        std::string prefix = (static_cast<int>(i) == combat_selectedOption) ? "> " : "  ";
+        renderText(prefix + options[i], 50, options_y_start + i * 30);
+    }
+}
+
+void handleInput_CombatEncounter(SDL_Event& e) {
+    if (e.type != SDL_KEYDOWN) return;
+    const int numOptions = 2; // Attack, Flee (for now)
+
+    switch (e.key.keysym.sym) {
+        case SDLK_UP:
+            combat_selectedOption = (combat_selectedOption - 1 + numOptions) % numOptions;
+            break;
+        case SDLK_DOWN:
+            combat_selectedOption = (combat_selectedOption + 1) % numOptions;
+            break;
+        case SDLK_RETURN:
+        case SDLK_KP_ENTER:
+            if (combat_selectedOption == 0) { // Attack
+                outcome_log.clear();
+
+                // Player's Turn
+                int player_damage = 1; // Base damage if unarmed
+                if (!player.equipped_weapon_name.empty()) {
+                    const Item* weapon_tpl = getItemTemplateByName(player.equipped_weapon_name);
+                    if (weapon_tpl && weapon_tpl->data.contains("damage")) {
+                        player_damage = weapon_tpl->data.value("damage", 1);
+                    }
+                }
+                current_combat_encounter.enemy_hp -= player_damage;
+                current_combat_encounter.enemy_hp = std::max(0, current_combat_encounter.enemy_hp); // Ensure HP doesn't go below 0
+                outcome_log.push_back("You attack the " + current_combat_encounter.name + " for " + std::to_string(player_damage) + " damage.");
+
+                // Check for Enemy Defeat
+                if (current_combat_encounter.enemy_hp <= 0) {
+                    outcome_log.push_back("You defeated the " + current_combat_encounter.name + "!");
+                    
+                    player.xp += current_combat_encounter.xp_reward;
+                    outcome_log.push_back("Gained " + std::to_string(current_combat_encounter.xp_reward) + " XP.");
+
+                    if (current_combat_encounter.money_reward_max > 0) {
+                        int money_gain = current_combat_encounter.money_reward_min;
+                        if (current_combat_encounter.money_reward_max > current_combat_encounter.money_reward_min) {
+                            money_gain += rand() % (current_combat_encounter.money_reward_max - current_combat_encounter.money_reward_min + 1);
+                        }
+                        player.money += money_gain;
+                        outcome_log.push_back("Found " + std::to_string(money_gain) + " gold.");
+                    }
+
+                    for (const auto& reward : current_combat_encounter.item_rewards) {
+                        if ((static_cast<float>(rand()) / RAND_MAX) < reward.probability) {
+                            player.inventory[reward.item_name] += reward.quantity;
+                            outcome_log.push_back("Found " + std::to_string(reward.quantity) + "x " + reward.item_name + ".");
+                        }
+                    }
+                    currentState = GameState::OnQuest; // Use outcome screen to show victory details
+                    return;
+                }
+
+                // Enemy's Turn (if still alive)
+                int enemy_damage = current_combat_encounter.enemy_min_damage;
+                if (current_combat_encounter.enemy_max_damage > current_combat_encounter.enemy_min_damage) {
+                    enemy_damage += rand() % (current_combat_encounter.enemy_max_damage - current_combat_encounter.enemy_min_damage + 1);
+                }
+                player.health -= enemy_damage;
+                player.health = std::max(0, player.health); // Ensure HP doesn't go below 0
+                outcome_log.push_back(current_combat_encounter.name + " attacks you for " + std::to_string(enemy_damage) + " damage.");
+
+                // Check for Player Defeat
+                if (player.health <= 0) {
+                    outcome_log.push_back("You have been defeated!");
+                    // Potentially add more messages or clear for a specific game over message
+                    currentState = GameState::GameOver;
+                    return;
+                }
+                // If combat continues, outcome_log will be displayed by renderQuestOutcome if we switch state,
+                // or needs to be handled by renderCombatEncounter if we stay in CombatEncounter state.
+                // For now, HP changes are visible, detailed log on victory/defeat via OnQuest/GameOver.
+
+            } else if (combat_selectedOption == 1) { // Flee
+                outcome_log.clear();
+                outcome_log.push_back("You attempt to flee...");
+                float flee_chance = 0.75f; // 75% chance to flee
+                if ((static_cast<float>(rand()) / RAND_MAX) < flee_chance) {
+                    outcome_log.push_back("Successfully fled!");
+                    currentState = GameState::OnQuest; // Show outcome log, then usually back to InTown or previous state
+                } else {
+                    outcome_log.push_back("Your attempt to flee failed!");
+                    // Enemy gets a free attack
+                    int enemy_damage = current_combat_encounter.enemy_min_damage;
+                    if (current_combat_encounter.enemy_max_damage > current_combat_encounter.enemy_min_damage) {
+                        enemy_damage += rand() % (current_combat_encounter.enemy_max_damage - current_combat_encounter.enemy_min_damage + 1);
+                    }
+                    player.health -= enemy_damage;
+                    player.health = std::max(0, player.health);
+                    outcome_log.push_back(current_combat_encounter.name + " attacks you for " + std::to_string(enemy_damage) + " damage as you stumble.");
+
+                    if (player.health <= 0) {
+                        outcome_log.push_back("You have been defeated!");
+                        currentState = GameState::GameOver;
+                    } else {
+                        // Player survived the counter-attack after failed flee.
+                        // Stay in CombatEncounter state; outcome_log will be displayed by renderCombatEncounter.
+                        currentState = GameState::CombatEncounter; 
+                    }
+                }
+            }
+            break;
+        case SDLK_ESCAPE:
+            // Maybe allow escaping combat with Esc? Or make it part of Flee option.
+            // For now, let's say Flee is the only way out other than winning/losing.
+            break;
+    }
+}
 
 
 
