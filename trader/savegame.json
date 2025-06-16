@@ -1,0 +1,14 @@
+{
+    "current_day": 1,
+    "current_time": 0,
+    "player": {
+        "equipped_weapon_name": "",
+        "health": 100,
+        "hold_space": 50,
+        "inventory": {},
+        "level": 1,
+        "max_health": 100,
+        "money": 500,
+        "xp": 0
+    }
+}

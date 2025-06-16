@@ -1,0 +1,75 @@
+; Name: Tutorial
+; Description: Tutorials levels to teach puzzle mechanincs
+; Author: Christopher Roelofs
+; Date: 2025-06-13
+
+; Name: Reset
+; Description: Reset level
+; Difficulty: Easy
+##########
+#O....H..#
+#.###.##.#
+#...#....#
+##.###.#.#
+#..#.....#
+#.####.###
+#........#
+#.....#.G#
+##########
+
+; Name: Warp
+; Description: Warp level
+; Difficulty: Easy
+##########
+#O.....1.#
+#.######.#
+#...#....#
+##.###.#.#
+#..#.....#
+#.####.###
+#........#
+#1....#.G#
+##########
+
+; Name: Goal
+; Description: Goal level
+; Difficulty: Easy
+##########
+#O.......#
+#.###.##.#
+#...#....#
+##.###.#.#
+#..#.....#
+#.####.###
+#........#
+#.....#.G#
+##########
+
+
+
+
+
+; Name: Reverse
+; Description: Reverse level
+; Difficulty: Easy
+##########
+#O.R.R...#
+#.###.##.#
+#...#....#
+##.###.#.#
+#..#.....#
+#.####.###
+#........#
+#.....#.G#
+##########
+
+
+
+
+
+
+
+
+
+
+

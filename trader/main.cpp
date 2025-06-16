@@ -58,6 +58,7 @@ struct Player {
     int xp = 0;
     int level = 1;
 };
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Player, health, max_health, money, hold_space, inventory, equipped_weapon_name, xp, level);
 
 struct RandomEncounterItemReward {
     std::string item_name;
@@ -144,6 +145,9 @@ void initializeNewGame();
 void generateStoreInventory();
 void advanceTime(int units);
 const Item* getItemTemplateByName(const std::string& name); // Helper to find item by name
+bool saveFileExists(const std::string& filename);
+void saveGame(const std::string& filename);
+bool loadGame(const std::string& filename);
 void closeSDL();
 void renderText(const std::string& text, int x, int y, bool centered = false);
 
@@ -272,6 +276,74 @@ void closeSDL() {
     SDL_DestroyWindow(gWindow);
     TTF_Quit();
     SDL_Quit();
+}
+
+bool saveFileExists(const std::string& filename) {
+    std::ifstream f(filename.c_str());
+    return f.good();
+}
+
+void saveGame(const std::string& filename) {
+    json saveData;
+    saveData["player"] = player;
+    saveData["current_day"] = current_day;
+    saveData["current_time"] = current_time;
+
+    std::ofstream o(filename);
+    if (o.is_open()) {
+        o << saveData.dump(4); // pretty print
+        o.close();
+        // outcome_log.push_back("Game saved to " + filename); // Optional: User feedback
+        std::cout << "Game saved to " << filename << std::endl;
+    } else {
+        // outcome_log.push_back("Error: Could not save game to " + filename);
+        std::cerr << "Error: Could not save game to " + filename << std::endl;
+    }
+}
+
+bool loadGame(const std::string& filename) {
+    std::ifstream i(filename);
+    if (!i.is_open()) {
+        std::cerr << "Info: Save file " << filename << " not found." << std::endl;
+        return false;
+    }
+
+    json saveData;
+    try {
+        i >> saveData;
+    } catch (json::parse_error& e) {
+        std::cerr << "Error: Could not parse save file " << filename << ". " << e.what() << std::endl;
+        return false;
+    }
+
+    try {
+        if (saveData.contains("player")) {
+            saveData.at("player").get_to(player);
+        } else {
+            std::cerr << "Error: Save file missing 'player' data." << std::endl;
+            return false;
+        }
+        if (saveData.contains("current_day")) {
+            current_day = saveData.at("current_day").get<int>();
+        } else {
+            std::cerr << "Error: Save file missing 'current_day' data." << std::endl;
+            return false;
+        }
+        if (saveData.contains("current_time")) {
+            current_time = saveData.at("current_time").get<int>();
+        } else {
+            std::cerr << "Error: Save file missing 'current_time' data." << std::endl;
+            return false;
+        }
+    } catch (json::exception& e) {
+        std::cerr << "Error: Corrupted data in save file " << filename << ". " << e.what() << std::endl;
+        return false;
+    }
+
+    std::cout << "Game loaded from " << filename << std::endl;
+    // outcome_log.clear();
+    // outcome_log.push_back("Game loaded from " + filename); // Optional: User feedback
+    return true;
 }
 
 void loadCraftingRecipes(const json& data) {
@@ -429,9 +501,27 @@ void renderText(const std::string& text, int x, int y, bool centered) {
 }
 
 void renderMainMenu() {
-    renderText(gameSettings.game_title, 0, 50, true);
-    renderText((mainMenu_selectedOption == 0 ? "> " : "") + std::string("New Game"), 0, 200, true);
-    renderText((mainMenu_selectedOption == 1 ? "> " : "") + std::string("Quit"), 0, 230, true);
+    renderTextWithColor(gameSettings.game_title, 0, 50, {255, 255, 0}, true);
+
+    std::vector<std::string> menuItems;
+    menuItems.push_back("New Game");
+    bool hasSave = saveFileExists("savegame.json");
+    if (hasSave) {
+        menuItems.push_back("Load Game");
+    }
+    menuItems.push_back("Quit");
+
+    // If selected option is out of bounds (e.g. save file deleted while menu is up)
+    if (mainMenu_selectedOption >= static_cast<int>(menuItems.size())) {
+        mainMenu_selectedOption = static_cast<int>(menuItems.size()) - 1;
+    }
+
+    for (size_t i = 0; i < menuItems.size(); ++i) {
+        renderTextWithColor((mainMenu_selectedOption == static_cast<int>(i) ? "> " : "  ") + menuItems[i],
+                   SCREEN_WIDTH / 2 - 100, 150 + (i * 40),
+                   (mainMenu_selectedOption == static_cast<int>(i) ? SDL_Color{255, 255, 0} : SDL_Color{255, 255, 255}), false);
+    }
+    renderTextWithColor("Select with Enter. Q to Quit Game.", 0, SCREEN_HEIGHT - 50, {255,255,255}, true);
 }
 
 void renderInTown() {
@@ -496,21 +586,51 @@ void handleInput(SDL_Event& e, bool& quit) {
 void handleInput_MainMenu(SDL_Event& e, bool& quit) {
     if (e.type != SDL_KEYDOWN) return;
 
+    bool hasSave = saveFileExists("savegame.json");
+    std::vector<std::string> menuItems;
+    menuItems.push_back("New Game");
+    if (hasSave) {
+        menuItems.push_back("Load Game");
+    }
+    menuItems.push_back("Quit");
+    const int numOptions = menuItems.size();
+
     switch (e.key.keysym.sym) {
         case SDLK_UP:
-            mainMenu_selectedOption = (mainMenu_selectedOption - 1 + 2) % 2;
+            mainMenu_selectedOption = (mainMenu_selectedOption - 1 + numOptions) % numOptions;
             break;
         case SDLK_DOWN:
-            mainMenu_selectedOption = (mainMenu_selectedOption + 1) % 2;
+            mainMenu_selectedOption = (mainMenu_selectedOption + 1) % numOptions;
             break;
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
-            if (mainMenu_selectedOption == 0) { // New Game
-                initializeNewGame();
-                inTown_selectedOption = 0; // Reset town menu selection
-                currentState = GameState::InTown;
-            } else if (mainMenu_selectedOption == 1) { // Quit
-                quit = true;
+            {
+                std::string selectedAction = menuItems[mainMenu_selectedOption];
+                if (selectedAction == "New Game") {
+                    initializeNewGame();
+                    inTown_selectedOption = 0;
+                    currentState = GameState::InTown;
+                    saveGame("savegame.json"); // Autosave
+                    // outcome_log.clear(); // Optional: clear log for new game
+                    // outcome_log.push_back("A new adventure begins!");
+                } else if (selectedAction == "Load Game") {
+                    if (loadGame("savegame.json")) {
+                        // loadGameData(); // Already called at start, ensure item_templates etc. are fresh if needed after load
+                        inTown_selectedOption = 0;
+                        currentState = GameState::InTown;
+                        saveGame("savegame.json"); // Autosave after successful load
+                    } else {
+                        // Failed to load, start a new game as a fallback
+                        initializeNewGame();
+                        inTown_selectedOption = 0;
+                        currentState = GameState::InTown;
+                        saveGame("savegame.json"); // Autosave after fallback to new game
+                        // outcome_log.clear();
+                        // outcome_log.push_back("Failed to load save. Starting new game.");
+                    }
+                } else if (selectedAction == "Quit") {
+                    quit = true;
+                }
             }
             break;
         case SDLK_q:
@@ -801,6 +921,7 @@ void renderQuestOutcome() {
 void handleInput_QuestOutcome(SDL_Event& e) {
     if (e.type == SDL_KEYDOWN) {
         currentState = GameState::InTown;
+        saveGame("savegame.json"); // Autosave
     }
 }
 
@@ -1135,6 +1256,7 @@ void handleInput_Crafting(SDL_Event& e) {
             outcome_log.clear(); // Clear any crafting messages
             crafting_selectedRecipeIndex = 0; // Reset selection
             currentState = GameState::InTown;
+            saveGame("savegame.json"); // Autosave
             break;
     }
 }
@@ -1219,10 +1341,12 @@ void handleInput_CombatEncounter(SDL_Event& e) {
                 float flee_chance = 0.75f; // 75% chance to flee
                 if ((static_cast<float>(rand()) / RAND_MAX) < flee_chance) {
                     outcome_log.push_back("Successfully fled!");
-                    currentState = GameState::OnQuest; // Show outcome log, then usually back to InTown or previous state
+                    currentState = GameState::InTown; 
+                    saveGame("savegame.json"); // Autosave
+                    // Reset combat state if necessary
+                    current_combat_encounter = {}; // Clear encounter details
+                    combat_selectedOption = 0;
                 } else {
-                    outcome_log.push_back("Your attempt to flee failed!");
-                    // Enemy gets a free attack
                     int enemy_damage = current_combat_encounter.enemy_min_damage;
                     if (current_combat_encounter.enemy_max_damage > current_combat_encounter.enemy_min_damage) {
                         enemy_damage += rand() % (current_combat_encounter.enemy_max_damage - current_combat_encounter.enemy_min_damage + 1);
