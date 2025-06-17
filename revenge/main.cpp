@@ -414,9 +414,9 @@ int main(int argc, char* argv[]) {
 
     // --- ASSET LOADING ---
     FontManager::init();
-    FontManager::loadFont("vcr_osd_36", "assets/fonts/vcr_osd_mono.ttf", 36);
-    FontManager::loadFont("vcr_osd_24", "assets/fonts/vcr_osd_mono.ttf", 24);
-    FontManager::loadFont("vcr_osd_18", "assets/fonts/vcr_osd_mono.ttf", 18);
+    FontManager::loadFont("vcr_osd_36", "assets/fonts/VCR_OSD_MONO.ttf", 36);
+    FontManager::loadFont("vcr_osd_24", "assets/fonts/VCR_OSD_MONO.ttf", 24);
+    FontManager::loadFont("vcr_osd_18", "assets/fonts/VCR_OSD_MONO.ttf", 18);
 
     // Register all game textures with TextureManager
     TextureManager::registerTexture("wall", "wall.png");

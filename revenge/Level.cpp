@@ -8,6 +8,7 @@
 #include "Hole.h"
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 Level::Level() : m_width(0), m_height(0), m_tileSize(32), m_player(nullptr), m_catCount(0), m_cheeseCount(0) {}
 
