@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256px" height="256px" viewBox="0 0 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>green2</title>
+    <g id="Dice" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Artboard-Copy-19" transform="translate(-256.000000, -512.000000)">
+            <g id="Group-2"></g>
+            <g id="Group" fill="#FFFFFF" stroke="#27AE60" stroke-width="32">
+                <path d="M480,528 L288,528 C283.581722,528 279.581722,529.790861 276.686292,532.686292 C273.790861,535.581722 272,539.581722 272,544 L272,736 C272,740.418278 273.790861,744.418278 276.686292,747.313708 C279.581722,750.209139 283.581722,752 288,752 L480,752 C484.418278,752 488.418278,750.209139 491.313708,747.313708 C494.209139,744.418278 496,740.418278 496,736 L496,544 C496,539.581722 494.209139,535.581722 491.313708,532.686292 C488.418278,529.790861 484.418278,528 480,528 Z" id="Rectangle-Copy-14"></path>
+            </g>
+            <circle id="Oval-Copy-4" fill="#27AE60" cx="336" cy="688" r="24"></circle>
+            <circle id="Oval-Copy-3" fill="#27AE60" cx="432" cy="592" r="24"></circle>
+        </g>
+    </g>
+</svg>

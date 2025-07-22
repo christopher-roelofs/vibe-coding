@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256px" height="256px" viewBox="0 0 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>yellow1</title>
+    <g id="Dice" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Artboard-Copy-19" transform="translate(0.000000, -256.000000)">
+            <g id="Group-2"></g>
+            <g id="Group" fill="#FFFFFF" stroke="#F39C12" stroke-width="32">
+                <path d="M224,272 L32,272 C27.581722,272 23.581722,273.790861 20.6862915,276.686292 C17.790861,279.581722 16,283.581722 16,288 L16,480 C16,484.418278 17.790861,488.418278 20.6862915,491.313708 C23.581722,494.209139 27.581722,496 32,496 L224,496 C228.418278,496 232.418278,494.209139 235.313708,491.313708 C238.209139,488.418278 240,484.418278 240,480 L240,288 C240,283.581722 238.209139,279.581722 235.313708,276.686292 C232.418278,273.790861 228.418278,272 224,272 Z" id="Rectangle-Copy-7"></path>
+            </g>
+            <circle id="Oval-Copy-4" fill="#F39C12" cx="128" cy="384" r="24"></circle>
+        </g>
+    </g>
+</svg>

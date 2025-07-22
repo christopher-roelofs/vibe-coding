@@ -64,7 +64,7 @@ void Game::run() {
                 if (menu->shouldStartGame()) {
                     currentState = GameState::PLAYING;
                     wordSearch = std::make_unique<WordSearch>(renderer, font);
-                    wordSearch->newGame();
+                    wordSearch->newGame(menu->getSelectedTheme());
                     menu->reset();
                 } else if (menu->shouldQuit()) {
                     running = false;

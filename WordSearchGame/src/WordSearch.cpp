@@ -11,10 +11,13 @@ WordSearch::WordSearch(SDL_Renderer* renderer, TTF_Font* font, int gridSize)
     grid.resize(gridSize, std::vector<Cell>(gridSize, {'A', false, false}));
     srand(time(nullptr));
     
-    if (!loadWordList("words.txt")) {
-        std::cerr << "Warning: Could not load words.txt, using default word list" << std::endl;
-        wordPool = {"HELLO", "WORLD", "GAME", "SEARCH", "WORD", "FIND", "PUZZLE", "CODE",
-                    "COMPUTER", "PROGRAM", "ALGORITHM", "FUNCTION", "VARIABLE", "ARRAY"};
+    if (!loadThemes("words.ini")) {
+        std::cerr << "Warning: Could not load words.ini, trying words.txt" << std::endl;
+        if (!loadWordList("words.txt")) {
+            std::cerr << "Warning: Could not load words.txt, using default word list" << std::endl;
+            wordPool = {"HELLO", "WORLD", "GAME", "SEARCH", "WORD", "FIND", "PUZZLE", "CODE",
+                        "COMPUTER", "PROGRAM", "ALGORITHM", "FUNCTION", "VARIABLE", "ARRAY"};
+        }
     }
 }
 
@@ -153,8 +156,32 @@ void WordSearch::newGame() {
     wordsToFind.clear();
     foundWords.clear();
     
+    if (!themes.empty()) {
+        selectRandomTheme();
+    }
     selectRandomWords(8);
     
+    generateGrid();
+}
+
+void WordSearch::newGame(const std::string& theme) {
+    wordsToFind.clear();
+    foundWords.clear();
+    
+    if (theme == "Random" || theme.empty()) {
+        if (!themes.empty()) {
+            selectRandomTheme();
+        }
+    } else {
+        if (themes.find(theme) != themes.end() && !themes[theme].empty()) {
+            currentTheme = theme;
+            wordPool = themes[currentTheme];
+        } else {
+            selectRandomTheme();
+        }
+    }
+    
+    selectRandomWords(8);
     generateGrid();
 }
 
@@ -338,7 +365,12 @@ void WordSearch::renderWordList() {
     int listX = 550;
     int listY = 50;
     
-    SDL_Surface* surface = TTF_RenderText_Solid(font, "Words to Find:", white);
+    std::string headerText = "Words to Find:";
+    if (!currentTheme.empty()) {
+        headerText = "Theme: " + currentTheme;
+    }
+    
+    SDL_Surface* surface = TTF_RenderText_Solid(font, headerText.c_str(), white);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_Rect rect = {listX, listY, surface->w, surface->h};
     SDL_RenderCopy(renderer, texture, nullptr, &rect);
@@ -412,6 +444,57 @@ bool WordSearch::loadWordList(const std::string& filename) {
     
     file.close();
     return !wordPool.empty();
+}
+
+bool WordSearch::loadThemes(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        return false;
+    }
+    
+    themes.clear();
+    std::string line;
+    std::string currentSection;
+    
+    while (std::getline(file, line)) {
+        line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
+        
+        if (line.empty() || line[0] == ';' || line[0] == '#') {
+            continue;
+        }
+        
+        if (line[0] == '[' && line.back() == ']') {
+            currentSection = line.substr(1, line.length() - 2);
+            themes[currentSection] = std::vector<std::string>();
+        } else if (!currentSection.empty()) {
+            std::transform(line.begin(), line.end(), line.begin(), ::toupper);
+            if (line.length() <= static_cast<size_t>(gridSize)) {
+                themes[currentSection].push_back(line);
+            }
+        }
+    }
+    
+    file.close();
+    return !themes.empty();
+}
+
+void WordSearch::selectRandomTheme() {
+    if (themes.empty()) return;
+    
+    std::vector<std::string> themeNames;
+    for (const auto& theme : themes) {
+        if (!theme.second.empty()) {
+            themeNames.push_back(theme.first);
+        }
+    }
+    
+    if (!themeNames.empty()) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, themeNames.size() - 1);
+        currentTheme = themeNames[dis(gen)];
+        wordPool = themes[currentTheme];
+    }
 }
 
 void WordSearch::selectRandomWords(int count) {

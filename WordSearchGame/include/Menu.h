@@ -18,6 +18,7 @@ public:
     bool shouldStartGame() const { return startGame; }
     bool shouldQuit() const { return quit; }
     void reset();
+    const std::string& getSelectedTheme() const { return selectedTheme; }
     
 private:
     SDL_Renderer* renderer;
@@ -28,7 +29,12 @@ private:
     bool startGame;
     bool quit;
     
+    std::vector<std::string> themes;
+    int themeIndex;
+    std::string selectedTheme;
+    
     void renderText(const std::string& text, int x, int y, SDL_Color color);
+    void loadAvailableThemes();
 };
 
 #endif

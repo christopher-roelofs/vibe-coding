@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <set>
+#include <map>
 
 struct Cell {
     char letter;
@@ -24,6 +25,7 @@ public:
     void render();
     
     void newGame();
+    void newGame(const std::string& theme);
     bool isGameComplete() const;
     bool wantsToQuit() const { return quit; }
     
@@ -37,8 +39,12 @@ private:
     std::vector<std::string> wordsToFind;
     std::vector<std::string> foundWords;
     std::vector<std::string> wordPool;
+    std::map<std::string, std::vector<std::string>> themes;
+    std::string currentTheme;
     
     bool loadWordList(const std::string& filename);
+    bool loadThemes(const std::string& filename);
+    void selectRandomTheme();
     void selectRandomWords(int count);
     
     int cursorX, cursorY;

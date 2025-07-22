@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256px" height="256px" viewBox="0 0 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>blue4</title>
+    <g id="Dice" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Artboard-Copy-19" transform="translate(-768.000000, -768.000000)">
+            <g id="Group-2"></g>
+            <g id="Group" fill="#FFFFFF" stroke="#3498DB" stroke-width="32">
+                <path d="M992,784 L800,784 C795.581722,784 791.581722,785.790861 788.686292,788.686292 C785.790861,791.581722 784,795.581722 784,800 L784,992 C784,996.418278 785.790861,1000.41828 788.686292,1003.31371 C791.581722,1006.20914 795.581722,1008 800,1008 L992,1008 C996.418278,1008 1000.41828,1006.20914 1003.31371,1003.31371 C1006.20914,1000.41828 1008,996.418278 1008,992 L1008,800 C1008,795.581722 1006.20914,791.581722 1003.31371,788.686292 C1000.41828,785.790861 996.418278,784 992,784 Z" id="Rectangle-Copy-22"></path>
+            </g>
+            <circle id="Oval" fill="#3498DB" cx="848" cy="848" r="24"></circle>
+            <circle id="Oval-Copy-4" fill="#3498DB" cx="848" cy="944" r="24"></circle>
+            <circle id="Oval-Copy" fill="#3498DB" cx="944" cy="944" r="24"></circle>
+            <circle id="Oval-Copy-3" fill="#3498DB" cx="944" cy="848" r="24"></circle>
+        </g>
+    </g>
+</svg>
