@@ -87,15 +87,6 @@ Special dice spawn with a **5% chance** instead of regular dice and can be merge
 - **Window Size**: 640×480 pixels
 - **Tile Size**: 90×90 pixels with 10px margins
 
-### File Structure
-```
-assets/
-├── fonts/InterVariable.ttf
-└── images/
-    ├── 128px/          # Regular dice (6 colors × 6 values)
-    └── cute/           # Special dice (0.png - 11.png)
-```
-
 ### Build & Run
 ```bash
 make clean && make
