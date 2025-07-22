@@ -119,6 +119,9 @@ The game continues indefinitely with the goal of achieving the highest possible 
 - **Special Dice Icons**: [Dice Anim by Dani Maccari](https://dani-maccari.itch.io/dice-anim)
 - **Colored Dice Assets**: [Multi Color Dice Assets by Maps and Apps](https://mapsandapps.itch.io/multi-color-dice-assets)
 
+### Audio Assets
+- **Music & Sound Effects**: [Freegemas by José Tomás Tocino](https://github.com/JoseTomasTocino/freegemas)
+
 ### Development
 - **Game Design & Programming**: Christopher Roelofs
-- **Engine**: SDL2, SDL2_ttf, SDL2_image
+- **Engine**: SDL2, SDL2_ttf, SDL2_image, SDL2_mixer

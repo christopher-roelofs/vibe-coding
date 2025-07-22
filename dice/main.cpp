@@ -1,11 +1,13 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_mixer.h>
 #include <iostream>
 #include <vector>
 #include <random>
 #include <algorithm>
 #include <cmath>
+#define M_PI 3.14159265358979323846
 #include <string>
 #include <map>
 #include <fstream>
@@ -48,6 +50,19 @@ struct FloatingText {
     FloatingText() : text(""), x(0), y(0), alpha(255.0f), startTime(0), active(false) {}
 };
 
+struct Particle {
+    float x, y;           // Position
+    float vx, vy;         // Velocity
+    float life;           // Remaining life (0.0 to 1.0)
+    float size;           // Size of particle
+    Uint8 r, g, b;        // Color
+    Uint32 startTime;     // When particle was created
+    bool active;
+    
+    Particle() : x(0), y(0), vx(0), vy(0), life(1.0f), size(2.0f), 
+                 r(255), g(255), b(255), startTime(0), active(false) {}
+};
+
 enum SpecialDiceType {
     NORMAL = -1,
     HEART = 0,      // 0.png
@@ -82,11 +97,14 @@ private:
     SDL_Renderer* renderer;
     TTF_Font* font;
     TTF_Font* smallFont;
+    Mix_Music* backgroundMusic;
+    Mix_Chunk* matchSound;
     std::map<std::string, SDL_Texture*> diceTextures;
     std::map<int, SDL_Texture*> specialDiceTextures;
     std::vector<std::string> colorNames = {"red", "blue", "green", "yellow", "purple", "black"};
     std::vector<std::vector<Tile>> grid;
     std::vector<FloatingText> floatingTexts;
+    std::vector<Particle> particles;
     int cursorX, cursorY;
     int lastSelectedX, lastSelectedY; // Position of last dice selected with Enter
     float cursorDisplayX, cursorDisplayY; // Smooth animated cursor position
@@ -97,12 +115,13 @@ private:
     std::discrete_distribution<> spawnDist;
     
 public:
-    Game() : window(nullptr), renderer(nullptr), font(nullptr), smallFont(nullptr),
+    Game() : window(nullptr), renderer(nullptr), font(nullptr), smallFont(nullptr), backgroundMusic(nullptr), matchSound(nullptr),
              cursorX(0), cursorY(0), lastSelectedX(-1), lastSelectedY(-1), 
              cursorDisplayX(0.0f), cursorDisplayY(0.0f), cursorTargetX(0.0f), cursorTargetY(0.0f),
              score(0), highScore(0), rng(std::random_device{}()), spawnDist({50, 35, 15}) {
         grid.resize(GRID_HEIGHT, std::vector<Tile>(GRID_WIDTH));
         floatingTexts.resize(10); // Pool of floating texts
+        particles.resize(50); // Pool of particles for effects
     }
     
     ~Game() {
@@ -123,6 +142,11 @@ public:
         int imgFlags = IMG_INIT_PNG;
         if (!(IMG_Init(imgFlags) & imgFlags)) {
             std::cerr << "SDL_image could not initialize! SDL_image Error: " << IMG_GetError() << std::endl;
+            return false;
+        }
+        
+        if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+            std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << std::endl;
             return false;
         }
         
@@ -168,6 +192,16 @@ public:
         
         if (!loadSpecialDiceSprites()) {
             std::cerr << "Failed to load special dice sprites!" << std::endl;
+            return false;
+        }
+        
+        if (!loadBackgroundMusic()) {
+            std::cerr << "Failed to load background music!" << std::endl;
+            return false;
+        }
+        
+        if (!loadSoundEffects()) {
+            std::cerr << "Failed to load sound effects!" << std::endl;
             return false;
         }
         
@@ -227,6 +261,35 @@ public:
             }
             
             specialDiceTextures[specialType] = texture;
+        }
+        
+        return true;
+    }
+    
+    bool loadBackgroundMusic() {
+        backgroundMusic = Mix_LoadMUS("assets/audio/music.ogg");
+        if (!backgroundMusic) {
+            std::cerr << "Failed to load background music! Mix_Error: " << Mix_GetError() << std::endl;
+            return false;
+        }
+        
+        // Start playing background music on loop
+        if (Mix_PlayMusic(backgroundMusic, -1) == -1) {
+            std::cerr << "Failed to play background music! Mix_Error: " << Mix_GetError() << std::endl;
+            return false;
+        }
+        
+        // Set volume to 50% for background music
+        Mix_VolumeMusic(MIX_MAX_VOLUME / 2);
+        
+        return true;
+    }
+    
+    bool loadSoundEffects() {
+        matchSound = Mix_LoadWAV("assets/audio/match1.ogg");
+        if (!matchSound) {
+            std::cerr << "Failed to load match sound! Mix_Error: " << Mix_GetError() << std::endl;
+            return false;
         }
         
         return true;
@@ -539,6 +602,11 @@ public:
         }
         mergeCount++; // Count the target dice
         
+        // Play match sound effect
+        if (matchSound) {
+            Mix_PlayChannel(-1, matchSound, 0);
+        }
+        
         // Calculate score
         // Base score: value * 10
         // Merge count bonus: x2 for 3 tiles, x3 for 4 tiles, etc.
@@ -572,10 +640,16 @@ public:
             // Add floating text for value and score
             addFloatingText("+" + std::to_string(value + 1), targetX, targetY);
             addFloatingText("+" + std::to_string(earnedScore), targetX, targetY - 1);
+            
+            // Spawn merge particles
+            spawnMergeParticles(targetX, targetY, mergeCount);
         } else {
             // Handle 6s - explosive clear with bonus points
             grid[targetY][targetX].value = 0;
             grid[targetY][targetX].mergeCount = 0;
+            
+            // Extra particles for explosive 6s merge
+            spawnMergeParticles(targetX, targetY, mergeCount * 2);
             
             // Bonus score for clearing 6s
             earnedScore *= 2;
@@ -931,6 +1005,46 @@ public:
         }
     }
     
+    void spawnMergeParticles(int gridX, int gridY, int mergeCount) {
+        int centerX = GRID_OFFSET_X + gridX * (TILE_SIZE + TILE_MARGIN) + TILE_SIZE / 2;
+        int centerY = GRID_OFFSET_Y + gridY * (TILE_SIZE + TILE_MARGIN) + TILE_SIZE / 2;
+        
+        // Spawn 8-12 particles per merge
+        int particleCount = 8 + (mergeCount * 2);
+        if (particleCount > 16) particleCount = 16;
+        
+        int spawned = 0;
+        for (auto& p : particles) {
+            if (!p.active && spawned < particleCount) {
+                p.x = centerX + (rng() % 20 - 10); // Random offset around center
+                p.y = centerY + (rng() % 20 - 10);
+                
+                // Random velocity in all directions
+                float angle = (rng() % 360) * M_PI / 180.0f;
+                float speed = 50.0f + (rng() % 100); // 50-150 pixels per second
+                p.vx = cos(angle) * speed;
+                p.vy = sin(angle) * speed - 20.0f; // Slight upward bias
+                
+                p.life = 1.0f;
+                p.size = 2.0f + (rng() % 3); // 2-4 pixel size
+                
+                // Sparkly colors - white, yellow, or light blue
+                int colorType = rng() % 3;
+                if (colorType == 0) { // White sparkle
+                    p.r = 255; p.g = 255; p.b = 255;
+                } else if (colorType == 1) { // Golden sparkle  
+                    p.r = 255; p.g = 215; p.b = 0;
+                } else { // Light blue sparkle
+                    p.r = 173; p.g = 216; p.b = 230;
+                }
+                
+                p.startTime = SDL_GetTicks();
+                p.active = true;
+                spawned++;
+            }
+        }
+    }
+    
     void updateAnimations() {
         Uint32 currentTime = SDL_GetTicks();
         
@@ -1016,6 +1130,28 @@ public:
                 }
             }
         }
+        
+        // Update particles
+        for (auto& p : particles) {
+            if (p.active) {
+                float elapsed = (currentTime - p.startTime) / 1000.0f;
+                
+                // Update position based on velocity
+                p.x += p.vx * deltaTime;
+                p.y += p.vy * deltaTime;
+                
+                // Apply gravity to Y velocity
+                p.vy += 200.0f * deltaTime; // 200 pixels/sec^2 downward
+                
+                // Update life (fade over 1.5 seconds)
+                p.life = std::max(0.0f, 1.0f - (elapsed / 1.5f));
+                
+                // Deactivate when life reaches 0
+                if (p.life <= 0.0f || elapsed > 1.5f) {
+                    p.active = false;
+                }
+            }
+        }
     }
     
     void renderScore() {
@@ -1090,6 +1226,27 @@ public:
                 TILE_SIZE + 10 + 2 * i
             };
             SDL_RenderDrawRect(renderer, &borderRect);
+        }
+        
+        // Draw particles  
+        for (const auto& p : particles) {
+            if (p.active && p.life > 0.0f) {
+                // Set particle color with alpha based on life
+                Uint8 alpha = static_cast<Uint8>(p.life * 255);
+                SDL_SetRenderDrawColor(renderer, p.r, p.g, p.b, alpha);
+                
+                // Draw particle as a small filled rectangle
+                int size = static_cast<int>(p.size * p.life); // Size fades with life
+                if (size < 1) size = 1;
+                
+                SDL_Rect particleRect = {
+                    static_cast<int>(p.x - size/2),
+                    static_cast<int>(p.y - size/2),
+                    size,
+                    size
+                };
+                SDL_RenderFillRect(renderer, &particleRect);
+            }
         }
         
         // Draw floating texts
@@ -1248,6 +1405,19 @@ public:
             SDL_DestroyTexture(pair.second);
         }
         specialDiceTextures.clear();
+        
+        // Clean up sound effects
+        if (matchSound) {
+            Mix_FreeChunk(matchSound);
+            matchSound = nullptr;
+        }
+        
+        // Clean up music
+        if (backgroundMusic) {
+            Mix_FreeMusic(backgroundMusic);
+            backgroundMusic = nullptr;
+        }
+        Mix_CloseAudio();
         
         if (font) {
             TTF_CloseFont(font);
